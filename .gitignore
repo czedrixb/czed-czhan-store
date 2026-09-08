@@ -1,0 +1,14 @@
+node_modules/
+.nuxt/
+.output/
+.data/
+dist/
+.env
+.env.*
+!.env.example
+*.local
+test-results/
+playwright-report/
+blob-report/
+.pglite-test/
+tests/e2e/.auth/
