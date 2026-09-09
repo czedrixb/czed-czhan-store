@@ -9,7 +9,7 @@ test('a named account is shown on actions in the audit log', async ({ page, requ
   const displayName = `Clerk ${suffix}`
   const password = 'clerk-pass-123'
 
-  const account = await request.post('/api/users', { data: { username, displayName, password } })
+  const account = await request.post('/api/users', { data: { username, displayName, password, role: 'ADMIN' } })
   expect(account.ok()).toBeTruthy()
 
   await page.context().clearCookies()
@@ -20,6 +20,14 @@ test('a named account is shown on actions in the audit log', async ({ page, requ
   await page.getByLabel('Username').fill(username)
   await page.getByLabel('Password').fill(password)
   await page.getByRole('button', { name: 'Sign In' }).click()
+
+  // Admin-created accounts carry a temporary password and are forced through
+  // a one-time change before they can use the rest of the app.
+  await expect(page).toHaveURL('/settings/password')
+  await page.getByTestId('current-password').fill(password)
+  await page.getByTestId('new-password').fill(`${password}-new`)
+  await page.getByTestId('confirm-password').fill(`${password}-new`)
+  await page.getByTestId('submit-password').click()
   await expect(page).toHaveURL('/')
 
   const productName = `Audit Product ${suffix}`

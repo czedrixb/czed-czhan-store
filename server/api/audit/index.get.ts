@@ -2,6 +2,7 @@ import { desc, eq } from 'drizzle-orm'
 import { auditLogs, users } from '../../db/schema'
 
 export default defineEventHandler(async (event) => {
+  requireAdmin(event)
   const query = getQuery(event)
   const limit = Math.min(Math.max(Number(query.limit) || 100, 1), 250)
   const db = useDb()

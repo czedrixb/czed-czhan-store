@@ -35,6 +35,25 @@ See `.env.example`. In short:
 | `STORE_PASSWORD_HASH` | Password hash for the first account. Generate with `npm run hash-password -- <password>`. |
 | `SESSION_SECRET` | Random string used to sign the login session cookie. |
 
+## Accounts and roles
+
+Every family member signs in with their own account; there is no public
+registration. Two roles:
+
+- **Admin** — everything a Member can do, plus managing accounts (Settings →
+  Manage Users) and viewing the audit log (Settings → View Audit Log).
+- **Member** — full access to the everyday store features (sales, voids,
+  products, pricing, Excel import, inventory counts, reports, exports).
+
+An admin creates accounts with a temporary password; the new account is
+forced to set its own password the first time it signs in.
+
+While `STORE_PASSWORD_HASH` is set, the `STORE_USERNAME` account is restored
+to an active, unflagged admin on every server boot — this is the intended
+owner-recovery path (locked out? set the env var and restart), but it also
+means that account cannot be demoted or deactivated from the Users page as
+long as the variable is set.
+
 ## Moving to Supabase + Vercel
 
 The data layer is Drizzle ORM using the Postgres dialect throughout, so the

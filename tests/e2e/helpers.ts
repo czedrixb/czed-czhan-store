@@ -1,4 +1,4 @@
-import type { APIRequestContext } from '@playwright/test'
+import type { APIRequestContext, Page } from '@playwright/test'
 
 export interface ProductInput {
   name: string
@@ -24,4 +24,27 @@ export async function createProduct(request: APIRequestContext, input: ProductIn
     throw new Error(`createProduct failed: ${response.status()} ${await response.text()}`)
   }
   return response.json()
+}
+
+export interface UserInput {
+  username: string
+  displayName: string
+  password: string
+  role?: 'ADMIN' | 'MEMBER'
+}
+
+export async function createUser(request: APIRequestContext, input: UserInput) {
+  const response = await request.post('/api/users', { data: input })
+  if (!response.ok()) {
+    throw new Error(`createUser failed: ${response.status()} ${await response.text()}`)
+  }
+  return response.json()
+}
+
+export async function loginAs(page: Page, username: string, password: string) {
+  await page.context().clearCookies()
+  await page.goto('/login')
+  await page.getByLabel('Username').fill(username)
+  await page.getByLabel('Password').fill(password)
+  await page.getByRole('button', { name: 'Sign In' }).click()
 }

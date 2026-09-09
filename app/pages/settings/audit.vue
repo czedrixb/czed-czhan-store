@@ -1,4 +1,6 @@
 <script setup lang="ts">
+definePageMeta({ middleware: 'admin' })
+
 interface AuditEntry {
   id: number
   action: string

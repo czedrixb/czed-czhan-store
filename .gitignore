@@ -12,3 +12,8 @@ playwright-report/
 blob-report/
 .pglite-test/
 tests/e2e/.auth/
+
+# Local skill installs (npx skills add) — not part of the app
+.agents/
+.claude/
+skills-lock.json

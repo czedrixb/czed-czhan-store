@@ -34,5 +34,14 @@ export default defineEventHandler(async (event) => {
     description: `${user.displayName} signed in`,
   })
 
-  return { authenticated: true, user: { id: user.id, username: user.username, displayName: user.displayName } }
+  return {
+    authenticated: true,
+    user: {
+      id: user.id,
+      username: user.username,
+      displayName: user.displayName,
+      role: user.role,
+      mustChangePassword: user.mustChangePassword,
+    },
+  }
 })
