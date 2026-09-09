@@ -1,5 +1,5 @@
 import { and, asc, eq, gte, isNull, lt, sql } from 'drizzle-orm'
-import { products, sales } from '../../db/schema'
+import { products, sales, saleTransactions } from '../../db/schema'
 
 export default defineEventHandler(async () => {
   const db = useDb()
@@ -7,13 +7,20 @@ export default defineEventHandler(async () => {
 
   const [totals] = await db
     .select({
-      revenue: sql<number>`coalesce(sum(${sales.revenue}), 0)`,
-      profit: sql<number>`coalesce(sum(${sales.profit}), 0)`,
-      itemsSold: sql<number>`coalesce(sum(${sales.quantity}), 0)`,
+      revenue: sql<number>`coalesce(sum(${saleTransactions.revenue}), 0)`,
+      profit: sql<number>`coalesce(sum(${saleTransactions.profit}), 0)`,
       transactions: sql<number>`count(*)`,
     })
+    .from(saleTransactions)
+    .where(and(gte(saleTransactions.soldAt, start), lt(saleTransactions.soldAt, end), isNull(saleTransactions.voidedAt)))
+
+  const [itemTotals] = await db
+    .select({
+      itemsSold: sql<number>`coalesce(sum(${sales.quantity}), 0)`,
+    })
     .from(sales)
-    .where(and(gte(sales.soldAt, start), lt(sales.soldAt, end), isNull(sales.voidedAt)))
+    .innerJoin(saleTransactions, eq(saleTransactions.id, sales.transactionId))
+    .where(and(gte(saleTransactions.soldAt, start), lt(saleTransactions.soldAt, end), isNull(saleTransactions.voidedAt)))
 
   const lowStock = await db
     .select()
@@ -30,7 +37,7 @@ export default defineEventHandler(async () => {
     revenue,
     cost: revenue - profit,
     profit,
-    itemsSold: Number(totals?.itemsSold ?? 0),
+    itemsSold: Number(itemTotals?.itemsSold ?? 0),
     transactions: Number(totals?.transactions ?? 0),
     lowStock,
   }

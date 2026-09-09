@@ -1,20 +1,21 @@
 import { and, desc, eq, gte, isNull, lt } from 'drizzle-orm'
-import { products, sales } from '../../db/schema'
+import { products, sales, saleTransactions } from '../../db/schema'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const db = useDb()
 
   const range = resolveDateRangeFromQuery(query)
-  const conditions = [gte(sales.soldAt, range.start), lt(sales.soldAt, range.end)]
+  const conditions = [gte(saleTransactions.soldAt, range.start), lt(saleTransactions.soldAt, range.end)]
 
   if (query.includeVoided !== 'true') {
-    conditions.push(isNull(sales.voidedAt))
+    conditions.push(isNull(saleTransactions.voidedAt))
   }
 
   const rows = await db
     .select({
       id: sales.id,
+      transactionId: sales.transactionId,
       productId: sales.productId,
       productName: products.name,
       productVariant: products.variant,
@@ -23,13 +24,16 @@ export default defineEventHandler(async (event) => {
       sellingPrice: sales.sellingPrice,
       revenue: sales.revenue,
       profit: sales.profit,
-      voidedAt: sales.voidedAt,
-      soldAt: sales.soldAt,
+      cashReceived: saleTransactions.cashReceived,
+      changeDue: saleTransactions.changeDue,
+      voidedAt: saleTransactions.voidedAt,
+      soldAt: saleTransactions.soldAt,
     })
     .from(sales)
     .innerJoin(products, eq(products.id, sales.productId))
+    .innerJoin(saleTransactions, eq(saleTransactions.id, sales.transactionId))
     .where(and(...conditions))
-    .orderBy(desc(sales.soldAt))
+    .orderBy(desc(saleTransactions.soldAt))
 
   return rows
 })
