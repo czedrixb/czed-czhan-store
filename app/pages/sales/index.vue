@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { PhReceipt } from '@phosphor-icons/vue'
 import type { Sale } from '~/types'
 
 const filters = [
@@ -8,14 +9,20 @@ const filters = [
   { key: 'month', label: 'This Month' },
 ] as const
 
+const toast = useToast()
+const { confirm } = useConfirm()
+
 const range = ref<(typeof filters)[number]['key']>('today')
 const sales = ref<Sale[]>([])
 const loading = ref(false)
+const voidingId = ref<number | null>(null)
 
 async function load() {
   loading.value = true
   try {
     sales.value = await $fetch<Sale[]>('/api/sales', { query: { range: range.value } })
+  } catch (err: unknown) {
+    toast.error(apiErrorMessage(err, 'Could not load sales history'))
   } finally {
     loading.value = false
   }
@@ -71,8 +78,25 @@ function receiptTotal(receipt: Receipt) {
 }
 
 async function voidReceipt(receipt: Receipt) {
-  await $fetch(`/api/sales/${receipt.transactionId}`, { method: 'DELETE' })
-  load()
+  const qty = receipt.lines.reduce((sum, l) => sum + l.quantity, 0)
+  const ok = await confirm({
+    title: 'Void this sale?',
+    body: `The ${qty} item${qty === 1 ? '' : 's'} go back into stock and ${formatPeso(receiptTotal(receipt))} stops counting toward revenue.`,
+    confirmLabel: 'Void sale',
+    tone: 'danger',
+  })
+  if (!ok) return
+
+  voidingId.value = receipt.transactionId
+  try {
+    await $fetch(`/api/sales/${receipt.transactionId}`, { method: 'DELETE' })
+    toast.success('Sale voided. Stock restored.')
+    await load()
+  } catch (err: unknown) {
+    toast.error(apiErrorMessage(err, 'Could not void sale'))
+  } finally {
+    voidingId.value = null
+  }
 }
 </script>
 
@@ -86,8 +110,8 @@ async function voidReceipt(receipt: Receipt) {
           v-for="f in filters"
           :key="f.key"
           type="button"
-          class="whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium"
-          :class="range === f.key ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'"
+          class="press focus-ring whitespace-nowrap rounded-[var(--radius-pill)] px-3 py-1.5 text-sm font-medium"
+          :class="range === f.key ? 'bg-brand-600 text-white' : 'bg-neutral-100 text-ink-muted'"
           @click="range = f.key"
         >
           {{ f.label }}
@@ -99,38 +123,40 @@ async function voidReceipt(receipt: Receipt) {
         <StatTile label="Profit" :value="formatPeso(totalProfit)" tone="brand" />
       </div>
 
-      <div v-if="loading" class="py-12 text-center text-gray-400">Loading…</div>
-      <p v-else-if="!sales.length" class="py-12 text-center text-gray-400">No sales in this period.</p>
+      <AppSkeleton v-if="loading" variant="list" class="mt-4" />
+      <AppEmpty v-else-if="!sales.length" :icon="PhReceipt" message="No sales in this period." />
 
       <div v-else class="mt-4 space-y-5">
         <section v-for="[day, items] in groups" :key="day">
-          <h2 class="mb-2 text-sm font-semibold text-gray-700">{{ day }}</h2>
+          <h2 class="mb-2 text-sm font-semibold text-ink-muted">{{ day }}</h2>
           <ul class="space-y-3">
             <li
-              v-for="receipt in items"
+              v-for="(receipt, i) in items"
               :key="receipt.transactionId"
-              class="rounded-2xl border border-gray-100 bg-white px-4 py-3"
+              class="list-enter-item rounded-[var(--radius-card)] border border-line bg-surface px-4 py-3"
               :class="{ 'opacity-40': receipt.voidedAt }"
+              :style="{ '--i': i }"
             >
               <div v-for="line in receipt.lines" :key="line.id" class="flex items-center justify-between py-1">
-                <p class="text-sm text-gray-900">
-                  {{ line.productName }}<span v-if="line.productVariant" class="text-gray-500"> · {{ line.productVariant }}</span>
-                  <span class="text-gray-400"> ×{{ line.quantity }}</span>
+                <p class="text-sm text-ink">
+                  {{ line.productName }}<span v-if="line.productVariant" class="text-ink-subtle"> · {{ line.productVariant }}</span>
+                  <span class="text-ink-subtle"> ×{{ line.quantity }}</span>
                 </p>
-                <span class="tabular-nums text-gray-700">{{ formatPeso(line.revenue) }}</span>
+                <span class="tabular-nums text-ink-muted">{{ formatPeso(line.revenue) }}</span>
               </div>
 
-              <div class="mt-2 flex items-center justify-between border-t border-gray-100 pt-2">
-                <p class="text-xs text-gray-400">{{ formatTimeLabel(receipt.soldAt) }}</p>
+              <div class="mt-2 flex items-center justify-between border-t border-line pt-2">
+                <p class="text-xs text-ink-subtle">{{ formatTimeLabel(receipt.soldAt) }}</p>
                 <div class="flex items-center gap-2">
-                  <span class="font-semibold tabular-nums text-gray-900">{{ formatPeso(receiptTotal(receipt)) }}</span>
+                  <span class="font-semibold tabular-nums text-ink">{{ formatPeso(receiptTotal(receipt)) }}</span>
                   <button
                     v-if="!receipt.voidedAt"
                     type="button"
-                    class="text-xs font-medium text-danger-600"
+                    class="focus-ring rounded-full px-2 py-1 text-xs font-medium text-danger-600 active:bg-danger-50 disabled:opacity-50"
+                    :disabled="voidingId === receipt.transactionId"
                     @click="voidReceipt(receipt)"
                   >
-                    Void
+                    {{ voidingId === receipt.transactionId ? 'Voiding' : 'Void' }}
                   </button>
                 </div>
               </div>

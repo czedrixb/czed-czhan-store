@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const toast = useToast()
+
 const name = ref('')
 const variant = ref('')
 const costPesos = ref<number | null>(null)
@@ -24,9 +26,12 @@ async function save() {
         lowStockThreshold: lowStockThreshold.value,
       },
     })
+    toast.success(`${name.value.trim()} added to inventory.`)
     await navigateTo(`/products/${created.id}`)
   } catch (err: unknown) {
-    error.value = (err as { data?: { statusMessage?: string } })?.data?.statusMessage || 'Could not create product'
+    const message = apiErrorMessage(err, 'Could not create product')
+    error.value = message
+    toast.error(message)
   } finally {
     saving.value = false
   }
@@ -40,43 +45,32 @@ async function save() {
     <div class="space-y-3 px-4 py-4">
       <p v-if="error" class="rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger-600">{{ error }}</p>
 
-      <label class="block text-sm">
-        <span class="text-gray-600">Product Name</span>
-        <input v-model="name" type="text" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2" />
-      </label>
-      <label class="block text-sm">
-        <span class="text-gray-600">Variant</span>
-        <input v-model="variant" type="text" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2" />
-      </label>
+      <AppField label="Product Name" for="product-name">
+        <input id="product-name" v-model="name" type="text" class="field-input" />
+      </AppField>
+      <AppField label="Variant" for="product-variant">
+        <input id="product-variant" v-model="variant" type="text" class="field-input" />
+      </AppField>
       <div class="grid grid-cols-2 gap-3">
-        <label class="block text-sm">
-          <span class="text-gray-600">Cost Price (₱)</span>
-          <input v-model.number="costPesos" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2" />
-        </label>
-        <label class="block text-sm">
-          <span class="text-gray-600">Selling Price (₱)</span>
-          <input v-model.number="sellingPesos" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2" />
-        </label>
+        <AppField label="Cost Price (₱)" for="product-cost">
+          <input id="product-cost" v-model.number="costPesos" type="number" min="0" step="0.01" class="field-input" />
+        </AppField>
+        <AppField label="Selling Price (₱)" for="product-selling">
+          <input id="product-selling" v-model.number="sellingPesos" type="number" min="0" step="0.01" class="field-input" />
+        </AppField>
       </div>
       <div class="grid grid-cols-2 gap-3">
-        <label class="block text-sm">
-          <span class="text-gray-600">Starting Stock</span>
-          <input v-model.number="stock" type="number" min="0" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2" />
-        </label>
-        <label class="block text-sm">
-          <span class="text-gray-600">Low Stock Threshold</span>
-          <input v-model.number="lowStockThreshold" type="number" min="0" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2" />
-        </label>
+        <AppField label="Starting Stock" for="product-stock">
+          <input id="product-stock" v-model.number="stock" type="number" min="0" class="field-input" />
+        </AppField>
+        <AppField label="Low Stock Threshold" for="product-threshold">
+          <input id="product-threshold" v-model.number="lowStockThreshold" type="number" min="0" class="field-input" />
+        </AppField>
       </div>
 
-      <button
-        type="button"
-        class="w-full rounded-xl bg-brand-600 py-3 text-sm font-semibold text-white disabled:opacity-50"
-        :disabled="saving || !name.trim()"
-        @click="save"
-      >
-        {{ saving ? 'Saving…' : 'Save Product' }}
-      </button>
+      <AppButton block class="mt-1" :loading="saving" :disabled="!name.trim()" @click="save">
+        {{ saving ? 'Saving' : 'Save Product' }}
+      </AppButton>
     </div>
   </div>
 </template>

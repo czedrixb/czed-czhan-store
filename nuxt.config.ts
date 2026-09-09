@@ -44,9 +44,9 @@ export default defineNuxtConfig({
       display: 'standalone',
       start_url: '/',
       icons: [
-        { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-        { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-        { src: 'icons/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        { src: 'icons/storefront-192.png', sizes: '192x192', type: 'image/png' },
+        { src: 'icons/storefront-512.png', sizes: '512x512', type: 'image/png' },
+        { src: 'icons/storefront-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
       ],
     },
     workbox: {
@@ -62,8 +62,13 @@ export default defineNuxtConfig({
     head: {
       viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
       meta: [{ name: 'theme-color', content: '#16a34a' }],
-      link: [{ rel: 'icon', type: 'image/png', href: '/icons/icon-192.png' }],
+      link: [
+        { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/icons/storefront-16.png' },
+        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/icons/storefront-32.png' },
+        { rel: 'apple-touch-icon', sizes: '180x180', href: '/icons/storefront-180.png' },
+      ],
     },
+    pageTransition: { name: 'page', mode: 'out-in' },
   },
 
   typescript: {

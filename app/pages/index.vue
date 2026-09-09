@@ -11,7 +11,7 @@ onActivated(() => refresh())
     <PageHeader title="Today's Summary" :subtitle="data ? formatDateLabel(data.date) : undefined" />
 
     <div class="space-y-6 px-4 py-4">
-      <div v-if="pending && !data" class="py-12 text-center text-gray-400">Loading…</div>
+      <AppSkeleton v-if="pending && !data" variant="stat-grid" />
 
       <template v-else-if="data">
         <div class="grid grid-cols-2 gap-3">
@@ -23,32 +23,37 @@ onActivated(() => refresh())
         <StatTile label="Transactions" :value="String(data.transactions)" />
 
         <section>
-          <h2 class="mb-2 text-sm font-semibold text-gray-700">Quick Actions</h2>
+          <h2 class="mb-2 text-sm font-semibold text-ink-muted">Quick Actions</h2>
           <div class="grid grid-cols-2 gap-3">
-            <NuxtLink to="/sales/new" class="rounded-xl bg-brand-600 px-4 py-3 text-center text-sm font-semibold text-white active:bg-brand-700">
+            <NuxtLink to="/sales/new" class="press focus-ring rounded-[var(--radius-control)] bg-brand-600 px-4 py-3 text-center text-sm font-semibold text-white active:bg-brand-700">
               Add Sale
             </NuxtLink>
-            <NuxtLink to="/inventory" class="rounded-xl border border-gray-200 bg-white px-4 py-3 text-center text-sm font-semibold text-gray-700 active:bg-gray-50">
+            <NuxtLink to="/inventory" class="press focus-ring rounded-[var(--radius-control)] border border-line bg-surface px-4 py-3 text-center text-sm font-semibold text-ink active:bg-neutral-50">
               View Inventory
             </NuxtLink>
-            <NuxtLink to="/sales" class="rounded-xl border border-gray-200 bg-white px-4 py-3 text-center text-sm font-semibold text-gray-700 active:bg-gray-50">
+            <NuxtLink to="/sales" class="press focus-ring rounded-[var(--radius-control)] border border-line bg-surface px-4 py-3 text-center text-sm font-semibold text-ink active:bg-neutral-50">
               Sales History
             </NuxtLink>
-            <NuxtLink to="/inventory/count" class="rounded-xl border border-gray-200 bg-white px-4 py-3 text-center text-sm font-semibold text-gray-700 active:bg-gray-50">
+            <NuxtLink to="/inventory/count" class="press focus-ring rounded-[var(--radius-control)] border border-line bg-surface px-4 py-3 text-center text-sm font-semibold text-ink active:bg-neutral-50">
               Inventory Count
             </NuxtLink>
           </div>
         </section>
 
         <section v-if="data.lowStock.length">
-          <h2 class="mb-2 text-sm font-semibold text-gray-700">Low Stock</h2>
-          <ul class="divide-y divide-gray-100 rounded-2xl border border-gray-100 bg-white">
-            <li v-for="p in data.lowStock" :key="p.id" class="flex items-center justify-between px-4 py-3">
+          <h2 class="mb-2 text-sm font-semibold text-ink-muted">Low Stock</h2>
+          <ul class="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface">
+            <li
+              v-for="(p, i) in data.lowStock"
+              :key="p.id"
+              class="list-enter-item flex items-center justify-between px-4 py-3"
+              :style="{ '--i': i }"
+            >
               <div>
-                <p class="font-medium text-gray-900">{{ p.name }}<span v-if="p.variant" class="text-gray-500"> · {{ p.variant }}</span></p>
+                <p class="font-medium text-ink">{{ p.name }}<span v-if="p.variant" class="text-ink-subtle"> · {{ p.variant }}</span></p>
                 <p class="text-xs text-warn-600">{{ p.stock }} remaining</p>
               </div>
-              <NuxtLink :to="`/products/${p.id}`" class="rounded-lg bg-warn-50 px-3 py-1.5 text-xs font-semibold text-warn-600">
+              <NuxtLink :to="`/products/${p.id}`" class="press focus-ring rounded-[var(--radius-control)] bg-warn-50 px-3 py-1.5 text-xs font-semibold text-warn-600">
                 Restock
               </NuxtLink>
             </li>

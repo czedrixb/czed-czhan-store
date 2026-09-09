@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { PhTag } from '@phosphor-icons/vue'
 import type { Product } from '~/types'
+
+const toast = useToast()
 
 const products = ref<Product[]>([])
 const drafts = reactive<Record<number, { cost: number | null; selling: number | null }>>({})
@@ -27,6 +30,9 @@ async function save(product: Product) {
       },
     })
     products.value = products.value.filter((p) => p.id !== product.id)
+    toast.success(`${product.name} priced.`)
+  } catch (err: unknown) {
+    toast.error(apiErrorMessage(err, 'Could not save pricing'))
   } finally {
     savingId.value = null
   }
@@ -38,12 +44,12 @@ async function save(product: Product) {
     <PageHeader title="Needs Pricing" :subtitle="`${products.length} product${products.length === 1 ? '' : 's'}`" />
 
     <div class="px-4 py-4">
-      <p v-if="!products.length" class="py-12 text-center text-gray-400">All products are priced.</p>
+      <AppEmpty v-if="!products.length" :icon="PhTag" message="All products are priced." />
 
       <ul v-else class="space-y-3">
-        <li v-for="p in products" :key="p.id" class="rounded-2xl border border-gray-100 bg-white p-4">
-          <p class="font-medium text-gray-900">{{ p.name }}<span v-if="p.variant" class="text-gray-500"> · {{ p.variant }}</span></p>
-          <p class="text-xs text-gray-400">Stock: {{ p.stock }}</p>
+        <li v-for="p in products" :key="p.id" class="rounded-[var(--radius-card)] border border-line bg-surface p-4">
+          <p class="font-medium text-ink">{{ p.name }}<span v-if="p.variant" class="text-ink-subtle"> · {{ p.variant }}</span></p>
+          <p class="text-xs text-ink-subtle">Stock: {{ p.stock }}</p>
           <div class="mt-2 flex gap-2">
             <input
               v-model.number="drafts[p.id].cost"
@@ -51,7 +57,7 @@ async function save(product: Product) {
               min="0"
               step="0.01"
               placeholder="Cost ₱"
-              class="w-24 rounded-lg border border-gray-200 px-2 py-1.5 text-sm"
+              class="field-input w-24 px-2 py-1.5 text-sm"
             />
             <input
               v-model.number="drafts[p.id].selling"
@@ -59,16 +65,17 @@ async function save(product: Product) {
               min="0"
               step="0.01"
               placeholder="Sell ₱"
-              class="w-24 rounded-lg border border-gray-200 px-2 py-1.5 text-sm"
+              class="field-input w-24 px-2 py-1.5 text-sm"
             />
-            <button
-              type="button"
-              class="flex-1 rounded-lg bg-brand-600 text-sm font-semibold text-white disabled:opacity-50"
-              :disabled="drafts[p.id].cost === null || drafts[p.id].selling === null || savingId === p.id"
+            <AppButton
+              size="sm"
+              class="flex-1"
+              :loading="savingId === p.id"
+              :disabled="drafts[p.id].cost === null || drafts[p.id].selling === null"
               @click="save(p)"
             >
               Save
-            </button>
+            </AppButton>
           </div>
         </li>
       </ul>

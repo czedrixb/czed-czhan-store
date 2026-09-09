@@ -3,6 +3,7 @@ import type { SessionResponse } from '~/types'
 
 const { data: session } = await useFetch<SessionResponse>('/api/auth/session')
 const forced = computed(() => Boolean(session.value?.user?.mustChangePassword))
+const toast = useToast()
 
 const currentPassword = ref('')
 const newPassword = ref('')
@@ -24,9 +25,12 @@ async function submit() {
       method: 'POST',
       body: { currentPassword: currentPassword.value, newPassword: newPassword.value },
     })
+    toast.success('Password changed.')
     await navigateTo(forced.value ? '/' : '/settings')
   } catch (err: unknown) {
-    error.value = (err as { data?: { statusMessage?: string } })?.data?.statusMessage || 'Could not change password'
+    const message = apiErrorMessage(err, 'Could not change password')
+    error.value = message
+    toast.error(message)
     currentPassword.value = ''
   } finally {
     loading.value = false
@@ -42,26 +46,23 @@ async function submit() {
         <p class="mt-1 text-brand-100">Choose your own password before using the store app.</p>
       </div>
 
-      <form class="space-y-4 rounded-2xl bg-white p-5 text-gray-900 shadow-xl" @submit.prevent="submit">
-        <label class="block text-sm font-medium">
-          <span class="text-gray-700">Current (temporary) password</span>
-          <input v-model="currentPassword" data-testid="current-password" type="password" autocomplete="current-password" class="mt-1 w-full rounded-xl border border-gray-200 px-4 py-3 text-base" />
-        </label>
-        <label class="block text-sm font-medium">
-          <span class="text-gray-700">New password</span>
-          <input v-model="newPassword" data-testid="new-password" type="password" autocomplete="new-password" class="mt-1 w-full rounded-xl border border-gray-200 px-4 py-3 text-base" />
-        </label>
-        <label class="block text-sm font-medium">
-          <span class="text-gray-700">Confirm new password</span>
-          <input v-model="confirmPassword" data-testid="confirm-password" type="password" autocomplete="new-password" class="mt-1 w-full rounded-xl border border-gray-200 px-4 py-3 text-base" />
-        </label>
+      <form class="space-y-4 rounded-[var(--radius-card)] bg-surface p-5 text-ink shadow-[var(--shadow-raised)]" @submit.prevent="submit">
+        <AppField label="Current (temporary) password" for="current-password">
+          <input id="current-password" v-model="currentPassword" data-testid="current-password" type="password" autocomplete="current-password" class="field-input" />
+        </AppField>
+        <AppField label="New password" for="new-password">
+          <input id="new-password" v-model="newPassword" data-testid="new-password" type="password" autocomplete="new-password" class="field-input" />
+        </AppField>
+        <AppField label="Confirm new password" for="confirm-password">
+          <input id="confirm-password" v-model="confirmPassword" data-testid="confirm-password" type="password" autocomplete="new-password" class="field-input" />
+        </AppField>
 
         <p v-if="mismatch" class="rounded-lg bg-danger-50 px-3 py-2 text-sm font-medium text-danger-600">Those passwords do not match</p>
         <p v-if="error" data-testid="password-error" class="rounded-lg bg-danger-50 px-3 py-2 text-sm font-medium text-danger-600">{{ error }}</p>
 
-        <button type="submit" data-testid="submit-password" class="w-full rounded-xl bg-brand-600 py-3 font-semibold text-white disabled:opacity-50" :disabled="!canSubmit || loading">
-          {{ loading ? 'Saving…' : 'Set Password' }}
-        </button>
+        <AppButton type="submit" block size="lg" data-testid="submit-password" :loading="loading" :disabled="!canSubmit">
+          {{ loading ? 'Saving' : 'Set Password' }}
+        </AppButton>
       </form>
     </div>
   </div>
@@ -69,27 +70,24 @@ async function submit() {
   <div v-else>
     <PageHeader title="Change Password" />
     <div class="px-4 py-4">
-      <form class="space-y-4 rounded-2xl border border-gray-100 bg-white p-4" @submit.prevent="submit">
-        <label class="block text-sm font-medium">
-          <span class="text-gray-700">Current password</span>
-          <input v-model="currentPassword" data-testid="current-password" type="password" autocomplete="current-password" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
-        </label>
-        <label class="block text-sm font-medium">
-          <span class="text-gray-700">New password</span>
-          <input v-model="newPassword" data-testid="new-password" type="password" autocomplete="new-password" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
-        </label>
-        <label class="block text-sm font-medium">
-          <span class="text-gray-700">Confirm new password</span>
-          <input v-model="confirmPassword" data-testid="confirm-password" type="password" autocomplete="new-password" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
-        </label>
+      <form class="space-y-4 rounded-[var(--radius-card)] border border-line bg-surface p-4" @submit.prevent="submit">
+        <AppField label="Current password" for="current-password">
+          <input id="current-password" v-model="currentPassword" data-testid="current-password" type="password" autocomplete="current-password" class="field-input text-sm" />
+        </AppField>
+        <AppField label="New password" for="new-password">
+          <input id="new-password" v-model="newPassword" data-testid="new-password" type="password" autocomplete="new-password" class="field-input text-sm" />
+        </AppField>
+        <AppField label="Confirm new password" for="confirm-password">
+          <input id="confirm-password" v-model="confirmPassword" data-testid="confirm-password" type="password" autocomplete="new-password" class="field-input text-sm" />
+        </AppField>
 
         <p v-if="mismatch" class="rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger-600">Those passwords do not match</p>
         <p v-if="error" data-testid="password-error" class="rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger-600">{{ error }}</p>
 
-        <button type="submit" data-testid="submit-password" class="w-full rounded-lg bg-brand-600 py-2 text-sm font-semibold text-white disabled:opacity-50" :disabled="!canSubmit || loading">
-          {{ loading ? 'Saving…' : 'Change Password' }}
-        </button>
-        <NuxtLink to="/settings" class="block text-center text-sm font-medium text-gray-500">Cancel</NuxtLink>
+        <AppButton type="submit" block size="sm" data-testid="submit-password" :loading="loading" :disabled="!canSubmit">
+          {{ loading ? 'Saving' : 'Change Password' }}
+        </AppButton>
+        <NuxtLink to="/settings" class="focus-ring block text-center text-sm font-medium text-ink-subtle">Cancel</NuxtLink>
       </form>
     </div>
   </div>

@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { PhCaretDown, PhCaretUp } from '@phosphor-icons/vue'
 import type { StoreUser, UserRole } from '~/types'
 
 definePageMeta({ middleware: 'admin' })
 
 const { data: session } = await useFetch<{ authenticated: boolean; user: { id: number } | null }>('/api/auth/session')
 const { data: users, refresh } = await useFetch<StoreUser[]>('/api/users')
+
+const { confirm } = useConfirm()
 
 const message = ref('')
 const error = ref('')
@@ -27,6 +30,9 @@ function isLastActiveAdmin(u: StoreUser) {
   return u.role === 'ADMIN' && u.isActive && activeAdminCount.value <= 1
 }
 
+// The inline banner below already surfaces both outcomes here, so this
+// intentionally doesn't also fire a toast with the same wording - see the
+// note on products/[id].vue's saveDetails for why that would be redundant.
 async function run(fn: () => Promise<unknown>, ok: string) {
   busy.value = true
   error.value = ''
@@ -36,7 +42,7 @@ async function run(fn: () => Promise<unknown>, ok: string) {
     await refresh()
     message.value = ok
   } catch (err: unknown) {
-    error.value = (err as { data?: { statusMessage?: string } })?.data?.statusMessage || 'Could not save'
+    error.value = apiErrorMessage(err, 'Could not save')
   } finally {
     busy.value = false
   }
@@ -54,16 +60,46 @@ function setRole(u: StoreUser, role: UserRole) {
   return run(() => $fetch(`/api/users/${u.id}`, { method: 'PATCH', body: { role } }), 'Role updated.')
 }
 
-function setActive(u: StoreUser, isActive: boolean) {
-  openId.value = null
-  return run(
-    () => $fetch(`/api/users/${u.id}`, { method: 'PATCH', body: { isActive } }),
-    isActive ? 'Account reactivated.' : 'Account deactivated.',
-  )
+async function demote(u: StoreUser) {
+  const ok = await confirm({
+    title: `Remove admin access from ${u.displayName}?`,
+    body: `${u.displayName} loses access to Users, the audit log, and reports.`,
+    confirmLabel: 'Remove admin access',
+    tone: 'warn',
+  })
+  if (!ok) return
+  await setRole(u, 'MEMBER')
 }
 
-function submitReset(u: StoreUser) {
-  return run(async () => {
+async function setActive(u: StoreUser, isActive: boolean) {
+  if (isActive) {
+    openId.value = null
+    await run(() => $fetch(`/api/users/${u.id}`, { method: 'PATCH', body: { isActive } }), 'Account reactivated.')
+    return
+  }
+
+  const ok = await confirm({
+    title: `Deactivate ${u.displayName}?`,
+    body: `${u.displayName} can no longer sign in. Their past activity stays in the audit log.`,
+    confirmLabel: 'Deactivate account',
+    tone: 'danger',
+  })
+  if (!ok) return
+
+  openId.value = null
+  await run(() => $fetch(`/api/users/${u.id}`, { method: 'PATCH', body: { isActive } }), 'Account deactivated.')
+}
+
+async function submitReset(u: StoreUser) {
+  const ok = await confirm({
+    title: `Reset ${u.displayName}'s access?`,
+    body: `${u.displayName} is signed out and must set a new password on their next sign-in.`,
+    confirmLabel: 'Reset access',
+    tone: 'warn',
+  })
+  if (!ok) return
+
+  await run(async () => {
     await $fetch(`/api/users/${u.id}/reset-password`, { method: 'POST', body: { password: resetPassword.value } })
     resetPassword.value = ''
     resetOpenId.value = null
@@ -93,131 +129,138 @@ function submitEdit(u: StoreUser) {
 
       <section class="space-y-2">
         <div class="flex items-center justify-between">
-          <h2 class="text-sm font-semibold text-gray-700">Accounts</h2>
-          <button type="button" data-testid="add-user-toggle" class="text-sm font-semibold text-brand-600" @click="showAddForm = !showAddForm">
+          <h2 class="text-sm font-semibold text-ink-muted">Accounts</h2>
+          <button type="button" data-testid="add-user-toggle" class="focus-ring text-sm font-semibold text-brand-600" @click="showAddForm = !showAddForm">
             {{ showAddForm ? 'Cancel' : '+ Add' }}
           </button>
         </div>
 
-        <div v-if="showAddForm" class="space-y-3 rounded-2xl border border-gray-100 bg-white p-4">
-          <input v-model="form.displayName" data-testid="new-user-display-name" type="text" placeholder="Display name" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
-          <input v-model="form.username" data-testid="new-user-username" type="text" placeholder="Username" autocomplete="off" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
-          <input v-model="form.password" data-testid="new-user-password" type="password" placeholder="Temporary password (at least 6 characters)" autocomplete="new-password" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
-          <select v-model="form.role" data-testid="new-user-role" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm">
-            <option value="MEMBER">Member</option>
-            <option value="ADMIN">Admin</option>
-          </select>
-          <p class="text-xs text-gray-500">They must change this password the first time they sign in.</p>
-          <button
-            type="button"
-            data-testid="create-user"
-            class="w-full rounded-lg bg-brand-600 py-2 text-sm font-semibold text-white disabled:opacity-50"
+        <AppCard v-if="showAddForm" class="space-y-3">
+          <AppField label="Display name" for="new-display-name">
+            <input id="new-display-name" v-model="form.displayName" data-testid="new-user-display-name" type="text" class="field-input text-sm" />
+          </AppField>
+          <AppField label="Username" for="new-username">
+            <input id="new-username" v-model="form.username" data-testid="new-user-username" type="text" autocomplete="off" class="field-input text-sm" />
+          </AppField>
+          <AppField label="Temporary password" hint="At least 6 characters. They must change it the first time they sign in." for="new-password">
+            <input id="new-password" v-model="form.password" data-testid="new-user-password" type="password" autocomplete="new-password" class="field-input text-sm" />
+          </AppField>
+          <AppField label="Role" for="new-role">
+            <select id="new-role" v-model="form.role" data-testid="new-user-role" class="field-input text-sm">
+              <option value="MEMBER">Member</option>
+              <option value="ADMIN">Admin</option>
+            </select>
+          </AppField>
+          <AppButton
+            block
+            size="sm"
+            :loading="busy"
             :disabled="busy || !form.displayName || !form.username || form.password.length < 6"
+            data-testid="create-user"
             @click="createUser"
           >
-            {{ busy ? 'Creating…' : 'Create Account' }}
-          </button>
-        </div>
+            {{ busy ? 'Creating' : 'Create Account' }}
+          </AppButton>
+        </AppCard>
 
-        <ul class="divide-y divide-gray-100 rounded-2xl border border-gray-100 bg-white">
+        <ul class="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface">
           <li v-for="u in sorted" :key="u.id" :data-testid="`user-row-${u.username}`" class="px-4 py-3" :class="u.isActive ? '' : 'opacity-60'">
             <button
               type="button"
-              class="flex w-full items-start justify-between gap-3 text-left"
+              class="focus-ring flex w-full items-start justify-between gap-3 text-left"
               :data-testid="`user-actions-toggle-${u.username}`"
               @click="openId = openId === u.id ? null : u.id"
             >
               <div>
-                <p class="text-sm font-medium text-gray-900">{{ u.displayName }}</p>
-                <p class="text-xs text-gray-500">@{{ u.username }}</p>
+                <p class="text-sm font-medium text-ink">{{ u.displayName }}</p>
+                <p class="text-xs text-ink-subtle">@{{ u.username }}</p>
               </div>
-              <div class="flex shrink-0 flex-wrap justify-end gap-1">
-                <span
-                  :data-testid="`user-role-${u.username}`"
-                  class="whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-bold tracking-wide"
-                  :class="u.role === 'ADMIN' ? 'bg-brand-50 text-brand-700' : 'bg-gray-100 text-gray-600'"
-                >{{ u.role }}</span>
-                <span v-if="!u.isActive" :data-testid="`user-status-${u.username}`" class="whitespace-nowrap rounded-full bg-danger-50 px-2 py-1 text-[10px] font-bold tracking-wide text-danger-600">INACTIVE</span>
-                <span v-else-if="u.mustChangePassword" :data-testid="`user-temp-${u.username}`" class="whitespace-nowrap rounded-full bg-warn-50 px-2 py-1 text-[10px] font-bold tracking-wide text-warn-600">TEMP PASSWORD</span>
+              <div class="flex shrink-0 items-start gap-1">
+                <div class="flex flex-wrap justify-end gap-1">
+                  <AppBadge :data-testid="`user-role-${u.username}`" :tone="u.role === 'ADMIN' ? 'brand' : 'neutral'">{{ u.role }}</AppBadge>
+                  <AppBadge v-if="!u.isActive" :data-testid="`user-status-${u.username}`" tone="danger">INACTIVE</AppBadge>
+                  <AppBadge v-else-if="u.mustChangePassword" :data-testid="`user-temp-${u.username}`" tone="warn">TEMP PASSWORD</AppBadge>
+                </div>
+                <component :is="openId === u.id ? PhCaretUp : PhCaretDown" class="mt-0.5 h-4 w-4 text-ink-subtle" aria-hidden="true" />
               </div>
             </button>
 
-            <div v-if="openId === u.id" class="mt-3 space-y-2 border-t border-gray-100 pt-3">
-              <button
-                type="button"
-                data-testid="user-edit-toggle"
-                class="block w-full rounded-lg border border-gray-200 py-2 text-sm font-medium text-gray-700"
-                :disabled="busy"
-                @click="toggleEdit(u)"
-              >Edit Account</button>
+            <div v-if="openId === u.id" class="mt-3 space-y-2 border-t border-line pt-3">
+              <AppButton variant="secondary" block size="sm" data-testid="user-edit-toggle" :disabled="busy" @click="toggleEdit(u)">
+                Edit Account
+              </AppButton>
               <div v-if="editOpenId === u.id" class="space-y-2">
-                <input v-model="editForm.displayName" data-testid="user-edit-display-name" type="text" placeholder="Display name" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
-                <input v-model="editForm.username" data-testid="user-edit-username" type="text" placeholder="Username" autocomplete="off" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
-                <button
-                  type="button"
-                  data-testid="user-edit-submit"
-                  class="w-full rounded-lg bg-brand-600 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                <AppField label="Display name" :for="`edit-display-name-${u.id}`">
+                  <input :id="`edit-display-name-${u.id}`" v-model="editForm.displayName" data-testid="user-edit-display-name" type="text" class="field-input text-sm" />
+                </AppField>
+                <AppField label="Username" :for="`edit-username-${u.id}`">
+                  <input :id="`edit-username-${u.id}`" v-model="editForm.username" data-testid="user-edit-username" type="text" autocomplete="off" class="field-input text-sm" />
+                </AppField>
+                <AppButton
+                  block
+                  size="sm"
+                  :loading="busy"
                   :disabled="busy || !editForm.displayName || !editForm.username"
+                  data-testid="user-edit-submit"
                   @click="submitEdit(u)"
-                >Save Changes</button>
+                >
+                  Save Changes
+                </AppButton>
               </div>
 
-              <button
-                v-if="u.role === 'MEMBER'"
-                type="button"
-                data-testid="user-make-admin"
-                class="block w-full rounded-lg border border-gray-200 py-2 text-sm font-medium text-gray-700"
-                :disabled="busy"
-                @click="setRole(u, 'ADMIN')"
-              >Make Admin</button>
-              <button
+              <AppButton v-if="u.role === 'MEMBER'" variant="secondary" block size="sm" data-testid="user-make-admin" :disabled="busy" @click="setRole(u, 'ADMIN')">
+                Make Admin
+              </AppButton>
+              <AppButton
                 v-else
-                type="button"
+                variant="secondary"
+                block
+                size="sm"
                 data-testid="user-make-member"
-                class="block w-full rounded-lg border border-gray-200 py-2 text-sm font-medium text-gray-700 disabled:opacity-50"
                 :disabled="busy || isLastActiveAdmin(u)"
-                @click="setRole(u, 'MEMBER')"
-              >Make Member</button>
+                @click="demote(u)"
+              >
+                Make Member
+              </AppButton>
 
-              <button
-                type="button"
+              <AppButton
+                variant="secondary"
+                block
+                size="sm"
                 data-testid="user-reset-toggle"
-                class="block w-full rounded-lg border border-gray-200 py-2 text-sm font-medium text-gray-700"
                 :disabled="busy || u.id === myId"
                 @click="resetOpenId = resetOpenId === u.id ? null : u.id"
-              >Reset Access</button>
+              >
+                Reset Access
+              </AppButton>
               <div v-if="resetOpenId === u.id" class="space-y-2">
-                <input v-model="resetPassword" data-testid="user-reset-password-input" type="password" placeholder="New temporary password" autocomplete="new-password" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
-                <button
-                  type="button"
-                  data-testid="user-reset-submit"
-                  class="w-full rounded-lg bg-brand-600 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                  :disabled="busy || resetPassword.length < 6"
-                  @click="submitReset(u)"
-                >Reset Password</button>
+                <AppField label="New temporary password" :for="`reset-password-${u.id}`">
+                  <input :id="`reset-password-${u.id}`" v-model="resetPassword" data-testid="user-reset-password-input" type="password" autocomplete="new-password" class="field-input text-sm" />
+                </AppField>
+                <AppButton block size="sm" :loading="busy" :disabled="busy || resetPassword.length < 6" data-testid="user-reset-submit" @click="submitReset(u)">
+                  Reset Password
+                </AppButton>
               </div>
 
-              <button
+              <AppButton
                 v-if="u.isActive"
-                type="button"
+                variant="danger"
+                block
+                size="sm"
                 data-testid="user-deactivate"
-                class="block w-full rounded-lg border border-gray-200 py-2 text-sm font-medium text-danger-600 disabled:opacity-50"
                 :disabled="busy || isLastActiveAdmin(u)"
                 @click="setActive(u, false)"
-              >Deactivate</button>
-              <button
-                v-else
-                type="button"
-                data-testid="user-reactivate"
-                class="block w-full rounded-lg border border-gray-200 py-2 text-sm font-medium text-brand-600"
-                :disabled="busy"
-                @click="setActive(u, true)"
-              >Reactivate</button>
+              >
+                Deactivate
+              </AppButton>
+              <AppButton v-else variant="ghost" block size="sm" data-testid="user-reactivate" :disabled="busy" @click="setActive(u, true)">
+                Reactivate
+              </AppButton>
             </div>
           </li>
         </ul>
 
-        <p class="text-xs text-gray-500">Deactivating keeps the person's past activity in the audit log.</p>
+        <p class="text-xs text-ink-subtle">Deactivating keeps the person's past activity in the audit log.</p>
       </section>
     </div>
   </div>

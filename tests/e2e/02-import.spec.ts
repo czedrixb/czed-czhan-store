@@ -14,6 +14,7 @@ test('importing the real store spreadsheet creates products with forward-filled 
   await expect(preview).toContainText('No prices found in this file')
 
   await page.getByTestId('confirm-import').click()
+  await page.getByTestId('confirm-accept').click()
   const result = page.getByTestId('import-result')
   await expect(result).toContainText('Created 296, updated 0, skipped 0')
 

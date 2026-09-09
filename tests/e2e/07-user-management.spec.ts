@@ -67,10 +67,13 @@ test.describe('admin: managing users', () => {
     await page.getByTestId('user-reset-toggle').click()
     await page.getByTestId('user-reset-password-input').fill('row-temp-456')
     await page.getByTestId('user-reset-submit').click()
+    await page.getByTestId('confirm-accept').click()
     await expect(page.getByTestId(`user-temp-${username}`)).toBeVisible()
 
     await page.getByTestId('user-make-member').click()
+    await page.getByTestId('confirm-accept').click()
     await page.getByTestId('user-deactivate').click()
+    await page.getByTestId('confirm-accept').click()
     await expect(page.getByTestId(`user-status-${username}`)).toBeVisible()
     if (screenshotDir) await page.screenshot({ path: path.join(screenshotDir, 'after-user-deactivated.png'), fullPage: true })
 
