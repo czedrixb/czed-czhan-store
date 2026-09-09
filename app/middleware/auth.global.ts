@@ -1,14 +1,12 @@
-import type { SessionResponse } from '~/types'
-
 const CHANGE_PASSWORD_PATH = '/settings/password'
 
 export default defineNuxtRouteMiddleware(async (to) => {
   if (to.path === '/login') return
 
-  const requestFetch = useRequestFetch()
-  let session: SessionResponse
+  const { load } = useSession()
+  let session
   try {
-    session = await requestFetch<SessionResponse>('/api/auth/session')
+    session = await load()
   } catch {
     return navigateTo('/login')
   }

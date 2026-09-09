@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { PhCaretRight, PhFileArrowUp, PhSignOut } from '@phosphor-icons/vue'
-import type { ImportPreview, SessionResponse } from '~/types'
+import type { ImportPreview } from '~/types'
 
-const { data: session } = await useFetch<SessionResponse>('/api/auth/session')
+const { session, clear } = useSession()
 const isAdmin = computed(() => session.value?.user?.role === 'ADMIN')
 const toast = useToast()
 const { confirm } = useConfirm()
@@ -67,6 +67,7 @@ async function logout() {
     toast.error(apiErrorMessage(err, 'Could not log out'))
     return
   }
+  clear()
   await navigateTo('/login')
 }
 </script>

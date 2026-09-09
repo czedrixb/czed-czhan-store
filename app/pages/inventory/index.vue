@@ -8,22 +8,33 @@ const search = ref('')
 const lowStockOnly = ref(false)
 const products = ref<Product[]>([])
 const loading = ref(false)
+const error = ref('')
 let timer: ReturnType<typeof setTimeout> | undefined
+let controller: AbortController | undefined
+let latestRequest = 0
 
 async function load() {
+  const requestId = ++latestRequest
+  controller?.abort()
+  controller = new AbortController()
   loading.value = true
+  error.value = ''
   try {
-    products.value = await $fetch<Product[]>('/api/products', {
+    const result = await $fetch<Product[]>('/api/products', {
+      signal: controller.signal,
       query: {
         active: 'true',
         q: search.value.trim() || undefined,
         lowStock: lowStockOnly.value ? 'true' : undefined,
       },
     })
+    if (requestId === latestRequest) products.value = result
   } catch (err: unknown) {
-    toast.error(apiErrorMessage(err, 'Could not load inventory'))
+    if (requestId !== latestRequest || (err instanceof DOMException && err.name === 'AbortError')) return
+    error.value = apiErrorMessage(err, 'Could not load inventory')
+    toast.error(error.value)
   } finally {
-    loading.value = false
+    if (requestId === latestRequest) loading.value = false
   }
 }
 
@@ -33,6 +44,10 @@ watch(search, () => {
 })
 watch(lowStockOnly, load)
 onMounted(load)
+onBeforeUnmount(() => {
+  clearTimeout(timer)
+  controller?.abort()
+})
 
 function status(p: Product) {
   return p.stock <= p.lowStockThreshold ? 'Low' : 'Normal'
@@ -67,6 +82,10 @@ function status(p: Product) {
       </label>
 
       <AppSkeleton v-if="loading" variant="list" />
+      <div v-else-if="error" class="space-y-2 rounded-[var(--radius-card)] border border-danger-200 bg-danger-50 p-4 text-sm text-danger-600">
+        <p>{{ error }}</p>
+        <AppButton size="sm" variant="secondary" @click="load">Try again</AppButton>
+      </div>
       <AppEmpty v-else-if="!products.length" :icon="PhPackage" message="No products found." />
 
       <ul v-else class="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface">

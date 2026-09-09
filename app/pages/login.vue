@@ -5,6 +5,7 @@ const username = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
+const { set } = useSession()
 
 async function submit() {
   if (!username.value.trim() || !password.value) return
@@ -15,6 +16,7 @@ async function submit() {
       method: 'POST',
       body: { username: username.value.trim(), password: password.value },
     })
+    set(res)
     await navigateTo(res.user?.role === 'MEMBER' ? '/sales/new' : '/')
   } catch (err: unknown) {
     error.value = apiErrorMessage(err, 'Incorrect username or password')
