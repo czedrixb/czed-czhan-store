@@ -8,6 +8,13 @@
       "when": 1788907437261,
       "tag": "0000_aspiring_millenium_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788928056135,
+      "tag": "0001_magenta_vector",
+      "breakpoints": true
     }
   ]
 }

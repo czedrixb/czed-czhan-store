@@ -2,7 +2,7 @@ import { spawn, spawnSync } from 'node:child_process'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { hashPin } from '../server/utils/auth'
+import { hashPassword } from '../server/utils/auth'
 
 // E2E tests run against a real production build rather than `nuxt dev` —
 // dev mode lazily compiles each route on first request, which raced with
@@ -11,13 +11,16 @@ import { hashPin } from '../server/utils/auth'
 // developer's real .data/pglite database and starting from a clean slate.
 const dataDir = mkdtempSync(path.join(tmpdir(), 'sari-sari-e2e-'))
 
-export const E2E_PIN = '1234'
+export const E2E_PASSWORD = '1234test'
 
 const env = {
   ...process.env,
   PORT: '3211',
   PGLITE_DIR: dataDir,
-  STORE_PIN_HASH: hashPin(E2E_PIN),
+  STORE_USERNAME: 'admin',
+  STORE_DISPLAY_NAME: 'Test Administrator',
+  STORE_PASSWORD_HASH: hashPassword(E2E_PASSWORD),
+  STORE_PIN_HASH: '',
   SESSION_SECRET: 'e2e-test-secret-not-for-production',
   DATABASE_URL: '',
   NODE_OPTIONS: '',

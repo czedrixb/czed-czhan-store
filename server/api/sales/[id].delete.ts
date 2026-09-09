@@ -4,6 +4,7 @@ import { sales } from '../../db/schema'
 export default defineEventHandler(async (event) => {
   const id = parseIdParam(event)
   const db = useDb()
+  const user = requireUser(event)
 
   const result = await db.transaction(async (tx) => {
     const [sale] = await tx.select().from(sales).where(eq(sales.id, id))
@@ -18,6 +19,14 @@ export default defineEventHandler(async (event) => {
       type: 'ADJUSTMENT',
       reason: `Voided sale #${sale.id}`,
       saleId: sale.id,
+    })
+
+    await recordAudit(tx, {
+      userId: user.id,
+      action: 'VOID',
+      entityType: 'SALE',
+      entityId: sale.id,
+      description: `Voided sale #${sale.id} and restored ${sale.quantity} item${sale.quantity === 1 ? '' : 's'}`,
     })
 
     return { ...sale, voidedAt: new Date() }

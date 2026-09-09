@@ -15,24 +15,34 @@ export default defineEventHandler(async (event) => {
 
   const { actualQuantity } = await readValidated(event, patchSchema)
   const db = useDb()
+  const user = requireUser(event)
 
-  const [count] = await db.select().from(inventoryCounts).where(eq(inventoryCounts.id, countId))
-  if (!count) throw createError({ statusCode: 404, statusMessage: 'Inventory count not found' })
-  if (count.status !== 'IN_PROGRESS') {
-    throw createError({ statusCode: 400, statusMessage: 'Inventory count is already completed' })
-  }
+  return db.transaction(async (tx) => {
+    const [count] = await tx.select().from(inventoryCounts).where(eq(inventoryCounts.id, countId))
+    if (!count) throw createError({ statusCode: 404, statusMessage: 'Inventory count not found' })
+    if (count.status !== 'IN_PROGRESS') {
+      throw createError({ statusCode: 400, statusMessage: 'Inventory count is already completed' })
+    }
 
-  const [item] = await db
-    .select()
-    .from(inventoryCountItems)
-    .where(and(eq(inventoryCountItems.id, itemId), eq(inventoryCountItems.inventoryCountId, countId)))
-  if (!item) throw createError({ statusCode: 404, statusMessage: 'Count item not found' })
+    const [item] = await tx
+      .select()
+      .from(inventoryCountItems)
+      .where(and(eq(inventoryCountItems.id, itemId), eq(inventoryCountItems.inventoryCountId, countId)))
+    if (!item) throw createError({ statusCode: 404, statusMessage: 'Count item not found' })
 
-  const [updated] = await db
-    .update(inventoryCountItems)
-    .set({ actualQuantity, difference: actualQuantity - item.expectedQuantity })
-    .where(eq(inventoryCountItems.id, itemId))
-    .returning()
+    const [updated] = await tx
+      .update(inventoryCountItems)
+      .set({ actualQuantity, difference: actualQuantity - item.expectedQuantity })
+      .where(eq(inventoryCountItems.id, itemId))
+      .returning()
 
-  return updated
+    await recordAudit(tx, {
+      userId: user.id,
+      action: 'COUNT_ITEM',
+      entityType: 'INVENTORY_COUNT',
+      entityId: countId,
+      description: `Counted product #${item.productId}: ${actualQuantity} actual, ${item.expectedQuantity} expected`,
+    })
+    return updated
+  })
 })

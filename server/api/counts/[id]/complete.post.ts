@@ -4,6 +4,7 @@ import { inventoryCountItems, inventoryCounts } from '../../../db/schema'
 export default defineEventHandler(async (event) => {
   const id = parseIdParam(event)
   const db = useDb()
+  const user = requireUser(event)
 
   const result = await db.transaction(async (tx) => {
     const [count] = await tx.select().from(inventoryCounts).where(eq(inventoryCounts.id, id))
@@ -34,6 +35,14 @@ export default defineEventHandler(async (event) => {
       .set({ status: 'COMPLETED', completedAt: new Date() })
       .where(eq(inventoryCounts.id, id))
       .returning()
+
+    await recordAudit(tx, {
+      userId: user.id,
+      action: 'COMPLETE',
+      entityType: 'INVENTORY_COUNT',
+      entityId: id,
+      description: `Completed inventory count #${id}`,
+    })
 
     return updated
   })

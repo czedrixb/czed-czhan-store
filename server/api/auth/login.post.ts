@@ -1,24 +1,24 @@
-export default defineEventHandler(async (event) => {
-  const body = await readBody<{ pin?: string }>(event)
-  const pin = body?.pin
+import { sql } from 'drizzle-orm'
+import { users } from '../../db/schema'
 
-  if (!pin || typeof pin !== 'string') {
-    throw createError({ statusCode: 400, statusMessage: 'PIN is required' })
+export default defineEventHandler(async (event) => {
+  const body = await readBody<{ username?: string; password?: string }>(event)
+  const username = body?.username?.trim().toLowerCase()
+  const password = body?.password
+
+  if (!username || !password || typeof password !== 'string') {
+    throw createError({ statusCode: 400, statusMessage: 'Username and password are required' })
   }
 
   const config = useRuntimeConfig()
-  if (!config.storePinHash) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Server is not configured with a store PIN (STORE_PIN_HASH is unset)',
-    })
+  const db = useDb()
+  const [user] = await db.select().from(users).where(sql`lower(${users.username}) = lower(${username})`)
+
+  if (!user || !user.isActive || !verifyPassword(password, user.passwordHash)) {
+    throw createError({ statusCode: 401, statusMessage: 'Incorrect username or password' })
   }
 
-  if (!verifyPin(pin, config.storePinHash)) {
-    throw createError({ statusCode: 401, statusMessage: 'Incorrect PIN' })
-  }
-
-  const token = createSessionToken(config.sessionSecret)
+  const token = createSessionToken(config.sessionSecret, user.id)
   setCookie(event, SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: 'lax',
@@ -27,5 +27,12 @@ export default defineEventHandler(async (event) => {
     maxAge: 30 * 24 * 60 * 60,
   })
 
-  return { authenticated: true }
+  await recordAudit(db, {
+    userId: user.id,
+    action: 'LOGIN',
+    entityType: 'SESSION',
+    description: `${user.displayName} signed in`,
+  })
+
+  return { authenticated: true, user: { id: user.id, username: user.username, displayName: user.displayName } }
 })
