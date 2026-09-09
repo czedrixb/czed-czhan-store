@@ -4,7 +4,7 @@ import type { StoreUser, UserRole } from '~/types'
 
 definePageMeta({ middleware: 'admin' })
 
-const { data: session } = await useFetch<{ authenticated: boolean; user: { id: number } | null }>('/api/auth/session')
+const { session } = useSession()
 const { data: users, refresh } = await useFetch<StoreUser[]>('/api/users')
 
 const { confirm } = useConfirm()

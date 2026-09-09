@@ -1,9 +1,7 @@
-import type { SessionResponse } from '~/types'
-
 export default defineNuxtRouteMiddleware(async () => {
-  const requestFetch = useRequestFetch()
+  const { load } = useSession()
   try {
-    const session = await requestFetch<SessionResponse>('/api/auth/session')
+    const session = await load()
     if (session.user?.role !== 'ADMIN') return navigateTo('/settings')
   } catch {
     return navigateTo('/settings')

@@ -286,7 +286,7 @@ onBeforeRouteLeave(async () => {
             v-model="search"
             type="search"
             placeholder="Search product..."
-            class="field-input pl-11"
+            class="field-input field-input--with-leading-icon"
             data-testid="product-search"
           />
         </div>

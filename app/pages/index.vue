@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import type { DashboardSummary } from '~/types'
 
-const { data, refresh, pending } = await useFetch<DashboardSummary>('/api/dashboard/today')
-
-onActivated(() => refresh())
+const { data, refresh, pending, error } = useLazyFetch<DashboardSummary>('/api/dashboard/today')
 </script>
 
 <template>
@@ -12,6 +10,11 @@ onActivated(() => refresh())
 
     <div class="space-y-6 px-4 py-4">
       <AppSkeleton v-if="pending && !data" variant="stat-grid" />
+
+      <div v-else-if="error" class="space-y-3 rounded-[var(--radius-card)] border border-danger-200 bg-danger-50 p-4 text-sm text-danger-600">
+        <p>Could not load today’s summary.</p>
+        <AppButton size="sm" variant="secondary" @click="refresh()">Try again</AppButton>
+      </div>
 
       <template v-else-if="data">
         <div class="grid grid-cols-2 gap-3">

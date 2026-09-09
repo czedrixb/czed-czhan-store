@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test'
 import { createProduct } from './helpers'
 
-test('inventory search placeholder clears its leading icon', async ({ page }) => {
-  await page.goto('/inventory')
+test('product search placeholder clears its leading icon', async ({ page }) => {
+  await page.goto('/sales/new')
 
-  const search = page.getByPlaceholder('Search inventory...')
+  const search = page.getByPlaceholder('Search product...')
   await expect(search).toBeVisible()
 
   await expect(search).toHaveCSS('padding-left', '52px')

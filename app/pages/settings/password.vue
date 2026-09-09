@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import type { SessionResponse } from '~/types'
-
-const { data: session } = await useFetch<SessionResponse>('/api/auth/session')
+const { session, load } = useSession()
 const forced = computed(() => Boolean(session.value?.user?.mustChangePassword))
 const toast = useToast()
 
@@ -25,6 +23,7 @@ async function submit() {
       method: 'POST',
       body: { currentPassword: currentPassword.value, newPassword: newPassword.value },
     })
+    await load({ force: true })
     toast.success('Password changed.')
     await navigateTo(forced.value ? '/' : '/settings')
   } catch (err: unknown) {
