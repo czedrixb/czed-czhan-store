@@ -2,9 +2,16 @@ import { sql } from 'drizzle-orm'
 import { users } from '../db/schema'
 
 export default defineNitroPlugin(async () => {
-  await runMigrations()
-
   const config = useRuntimeConfig()
+
+  // Only auto-migrate the embedded PGlite database (local dev/preview). The
+  // migrations SQL folder isn't traced into the Nitro serverless bundle, so
+  // this would crash on Vercel; production Postgres is migrated ahead of
+  // deploy via `npm run db:migrate` (see README).
+  if (!config.databaseUrl) {
+    await runMigrations()
+  }
+
   if (config.storePasswordHash) {
     const db = useDb()
     const username = String(config.storeUsername).trim().toLowerCase()
