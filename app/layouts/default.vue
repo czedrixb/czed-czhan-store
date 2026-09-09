@@ -4,10 +4,12 @@ const showNav = computed(() => route.path !== '/login' && route.path !== '/setti
 </script>
 
 <template>
-  <div class="mx-auto flex min-h-screen max-w-md flex-col bg-[#f8faf9]">
+  <div class="mx-auto flex min-h-screen max-w-md flex-col bg-surface-sunken">
     <main class="flex-1" :class="showNav ? 'pb-20' : ''">
       <slot />
     </main>
     <BottomNav v-if="showNav" />
+    <ToastHost />
+    <ConfirmDialog />
   </div>
 </template>

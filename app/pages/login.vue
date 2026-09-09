@@ -17,7 +17,7 @@ async function submit() {
     })
     await navigateTo(res.user?.role === 'MEMBER' ? '/sales/new' : '/')
   } catch (err: unknown) {
-    error.value = (err as { data?: { statusMessage?: string } })?.data?.statusMessage || 'Incorrect username or password'
+    error.value = apiErrorMessage(err, 'Incorrect username or password')
     password.value = ''
   } finally {
     loading.value = false
@@ -33,21 +33,34 @@ async function submit() {
         <p class="mt-1 text-brand-100">Sign in to your account</p>
       </div>
 
-      <form class="space-y-4 rounded-2xl bg-white p-5 text-gray-900 shadow-xl" @submit.prevent="submit">
-        <label class="block text-sm font-medium">
-          <span class="text-gray-700">Username</span>
-          <input v-model="username" name="username" type="text" autocomplete="username" autofocus class="mt-1 w-full rounded-xl border border-gray-200 px-4 py-3 text-base" />
-        </label>
-        <label class="block text-sm font-medium">
-          <span class="text-gray-700">Password</span>
-          <input v-model="password" name="password" type="password" autocomplete="current-password" class="mt-1 w-full rounded-xl border border-gray-200 px-4 py-3 text-base" />
-        </label>
+      <form class="space-y-4 rounded-[var(--radius-card)] bg-surface p-5 text-ink shadow-[var(--shadow-raised)]" @submit.prevent="submit">
+        <AppField label="Username" for="username">
+          <input
+            id="username"
+            v-model="username"
+            name="username"
+            type="text"
+            autocomplete="username"
+            autofocus
+            class="field-input"
+          />
+        </AppField>
+        <AppField label="Password" for="password">
+          <input
+            id="password"
+            v-model="password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            class="field-input"
+          />
+        </AppField>
 
         <p v-if="error" class="rounded-lg bg-danger-50 px-3 py-2 text-sm font-medium text-danger-600">{{ error }}</p>
 
-        <button type="submit" class="w-full rounded-xl bg-brand-600 py-3 font-semibold text-white disabled:opacity-50" :disabled="!username.trim() || !password || loading">
-          {{ loading ? 'Signing in…' : 'Sign In' }}
-        </button>
+        <AppButton type="submit" block size="lg" :loading="loading" :disabled="!username.trim() || !password">
+          {{ loading ? 'Signing in' : 'Sign In' }}
+        </AppButton>
       </form>
     </div>
   </div>

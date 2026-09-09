@@ -1,0 +1,110 @@
+<script setup lang="ts">
+import { PhWarning, PhWarningOctagon } from '@phosphor-icons/vue'
+import type { ConfirmRequest } from '~/composables/useConfirm'
+
+const { request, resolve } = useConfirm()
+const dialogRef = ref<HTMLDialogElement | null>(null)
+const cancelRef = ref<HTMLButtonElement | null>(null)
+
+// The composable clears `request` the instant resolve() is called, so we
+// hold the last non-null request here to keep rendering title/body while
+// the leave transition plays.
+const current = ref<(ConfirmRequest & { id: number; confirmLabel: string; cancelLabel: string; tone: 'danger' | 'warn' }) | null>(null)
+watch(
+  () => request.value,
+  (value) => {
+    if (value) current.value = value
+  },
+)
+const visible = computed(() => request.value !== null)
+
+watch(visible, async (isVisible) => {
+  if (!isVisible) return
+  await nextTick()
+  if (!dialogRef.value?.open) dialogRef.value?.showModal()
+  await nextTick()
+  // Safety default: focus lands on Cancel, never on the destructive action.
+  cancelRef.value?.focus()
+})
+
+function afterLeave() {
+  dialogRef.value?.close()
+}
+
+function onCancel(event: Event) {
+  // Fires for Esc-to-close on <dialog>. Treat it the same as tapping Cancel.
+  event.preventDefault()
+  resolve(false)
+}
+
+function onBackdropClick(event: MouseEvent) {
+  if (event.target === dialogRef.value) resolve(false)
+}
+
+const TONE_ICON = { danger: PhWarningOctagon, warn: PhWarning }
+const TONE_ICON_CLASS = { danger: 'text-danger-600 bg-danger-50', warn: 'text-warn-600 bg-warn-50' }
+</script>
+
+<template>
+  <dialog
+    ref="dialogRef"
+    data-testid="confirm-dialog"
+    class="m-0 max-h-none w-full max-w-md border-0 bg-transparent p-0 backdrop:bg-neutral-900/50"
+    style="position: fixed; inset: auto 0 0 0"
+    @cancel="onCancel"
+    @click="onBackdropClick"
+  >
+    <Transition name="sheet-panel" @after-leave="afterLeave">
+      <div
+        v-if="visible && current"
+        class="sheet-panel safe-bottom w-full rounded-t-[var(--radius-card)] bg-surface p-5"
+        style="box-shadow: var(--shadow-sheet)"
+        role="alertdialog"
+        :aria-labelledby="`confirm-title-${current.id}`"
+        @click.stop
+      >
+        <div class="flex items-start gap-3">
+          <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full" :class="TONE_ICON_CLASS[current.tone]">
+            <component :is="TONE_ICON[current.tone]" class="h-5 w-5" weight="fill" aria-hidden="true" />
+          </span>
+          <div class="flex-1 pt-1.5">
+            <h2 :id="`confirm-title-${current.id}`" class="text-base font-bold text-ink">{{ current.title }}</h2>
+            <p class="mt-1 text-sm leading-relaxed text-ink-muted">{{ current.body }}</p>
+          </div>
+        </div>
+
+        <div class="mt-5 flex flex-col gap-2">
+          <button
+            ref="cancelRef"
+            type="button"
+            data-testid="confirm-cancel"
+            class="press focus-ring min-h-[48px] w-full rounded-[var(--radius-control)] bg-brand-600 text-base font-semibold text-white active:bg-brand-700"
+            @click="resolve(false)"
+          >
+            {{ current.cancelLabel }}
+          </button>
+          <button
+            type="button"
+            data-testid="confirm-accept"
+            class="press focus-ring min-h-[48px] w-full rounded-[var(--radius-control)] border text-base font-semibold active:bg-danger-50"
+            :class="current.tone === 'danger' ? 'border-danger-600 text-danger-600' : 'border-warn-600 text-warn-600'"
+            @click="resolve(true)"
+          >
+            {{ current.confirmLabel }}
+          </button>
+        </div>
+      </div>
+    </Transition>
+  </dialog>
+</template>
+
+<style scoped>
+.sheet-panel-enter-active,
+.sheet-panel-leave-active {
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.sheet-panel-enter-from,
+.sheet-panel-leave-to {
+  transform: translateY(100%);
+}
+</style>

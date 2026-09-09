@@ -7,14 +7,14 @@ defineProps<{
 </script>
 
 <template>
-  <div class="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-    <p class="text-xs font-medium uppercase tracking-wide text-gray-500">{{ label }}</p>
+  <div class="rounded-[var(--radius-card)] border border-line bg-surface p-4" style="box-shadow: var(--shadow-card)">
+    <p class="text-xs font-medium uppercase tracking-wide text-ink-subtle">{{ label }}</p>
     <p
       class="mt-1 text-2xl font-bold tabular-nums"
       :class="{
         'text-brand-700': tone === 'brand',
         'text-danger-600': tone === 'danger',
-        'text-gray-900': !tone || tone === 'default',
+        'text-ink': !tone || tone === 'default',
       }"
     >
       {{ value }}

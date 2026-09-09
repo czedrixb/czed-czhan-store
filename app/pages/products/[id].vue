@@ -3,6 +3,8 @@ import type { Product } from '~/types'
 
 const route = useRoute()
 const id = Number(route.params.id)
+const toast = useToast()
+const { confirm } = useConfirm()
 
 const { data: product, refresh } = await useFetch<Product>(`/api/products/${id}`)
 
@@ -39,9 +41,11 @@ async function saveDetails() {
       },
     })
     await refresh()
+    // The inline banner below already confirms success; a toast with
+    // overlapping wording would just double up the same message on screen.
     message.value = 'Saved.'
   } catch (err: unknown) {
-    message.value = (err as { data?: { statusMessage?: string } })?.data?.statusMessage || 'Could not save'
+    toast.error(apiErrorMessage(err, 'Could not save'))
   } finally {
     savingDetails.value = false
   }
@@ -58,6 +62,8 @@ async function restock() {
     restockQty.value = null
     await refresh()
     message.value = 'Stock received.'
+  } catch (err: unknown) {
+    toast.error(apiErrorMessage(err, 'Could not receive stock'))
   } finally {
     restocking.value = false
   }
@@ -69,10 +75,21 @@ const adjustQty = ref<number | null>(null)
 const adjustReason = ref('')
 const adjusting = ref(false)
 async function adjust() {
-  if (!adjustQty.value || adjustQty.value === 0 || !adjustReason.value.trim()) return
+  if (!adjustQty.value || adjustQty.value === 0 || !adjustReason.value.trim() || !product.value) return
+
+  const delta = adjustType.value === 'ADJUSTMENT' ? adjustQty.value : -Math.abs(adjustQty.value)
+  if (delta < 0) {
+    const ok = await confirm({
+      title: 'Record this stock adjustment?',
+      body: `Stock on ${product.value.name} goes from ${product.value.stock} to ${product.value.stock + delta}. This is written to the audit log as ${adjustType.value}.`,
+      confirmLabel: 'Record adjustment',
+      tone: 'warn',
+    })
+    if (!ok) return
+  }
+
   adjusting.value = true
   try {
-    const delta = adjustType.value === 'ADJUSTMENT' ? adjustQty.value : -Math.abs(adjustQty.value)
     await $fetch(`/api/products/${id}/adjust`, {
       method: 'POST',
       body: { type: adjustType.value, delta, reason: adjustReason.value.trim() },
@@ -81,14 +98,33 @@ async function adjust() {
     adjustReason.value = ''
     await refresh()
     message.value = 'Adjustment recorded.'
+  } catch (err: unknown) {
+    toast.error(apiErrorMessage(err, 'Could not record adjustment'))
   } finally {
     adjusting.value = false
   }
 }
 
+const deactivating = ref(false)
 async function deactivate() {
-  await $fetch(`/api/products/${id}`, { method: 'DELETE' })
-  await navigateTo('/inventory')
+  if (!product.value) return
+  const ok = await confirm({
+    title: `Deactivate ${product.value.name}?`,
+    body: `${product.value.name} stops appearing in checkout and inventory. Past sales and stock history stay in the audit log.`,
+    confirmLabel: 'Deactivate product',
+    tone: 'danger',
+  })
+  if (!ok) return
+
+  deactivating.value = true
+  try {
+    await $fetch(`/api/products/${id}`, { method: 'DELETE' })
+    toast.success(`${product.value.name} deactivated.`)
+    await navigateTo('/inventory')
+  } catch (err: unknown) {
+    toast.error(apiErrorMessage(err, 'Could not deactivate product'))
+    deactivating.value = false
+  }
 }
 </script>
 
@@ -99,66 +135,57 @@ async function deactivate() {
     <div class="space-y-6 px-4 py-4">
       <p v-if="message" class="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">{{ message }}</p>
 
-      <section class="rounded-2xl border border-gray-100 bg-white p-4">
-        <h2 class="mb-3 text-sm font-semibold text-gray-700">Details</h2>
+      <AppCard>
+        <h2 class="mb-3 text-sm font-semibold text-ink-muted">Details</h2>
         <div class="space-y-3">
-          <label class="block text-sm">
-            <span class="text-gray-600">Product Name</span>
-            <input v-model="name" type="text" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2" />
-          </label>
-          <label class="block text-sm">
-            <span class="text-gray-600">Variant</span>
-            <input v-model="variant" type="text" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2" />
-          </label>
+          <AppField label="Product Name" for="detail-name">
+            <input id="detail-name" v-model="name" type="text" class="field-input" />
+          </AppField>
+          <AppField label="Variant" for="detail-variant">
+            <input id="detail-variant" v-model="variant" type="text" class="field-input" />
+          </AppField>
           <div class="grid grid-cols-2 gap-3">
-            <label class="block text-sm">
-              <span class="text-gray-600">Cost Price (₱)</span>
-              <input v-model.number="costPesos" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2" />
-            </label>
-            <label class="block text-sm">
-              <span class="text-gray-600">Selling Price (₱)</span>
-              <input v-model.number="sellingPesos" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2" />
-            </label>
+            <AppField label="Cost Price (₱)" for="detail-cost">
+              <input id="detail-cost" v-model.number="costPesos" type="number" min="0" step="0.01" class="field-input" />
+            </AppField>
+            <AppField label="Selling Price (₱)" for="detail-selling">
+              <input id="detail-selling" v-model.number="sellingPesos" type="number" min="0" step="0.01" class="field-input" />
+            </AppField>
           </div>
-          <label class="block text-sm">
-            <span class="text-gray-600">Low Stock Threshold</span>
-            <input v-model.number="lowStockThreshold" type="number" min="0" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2" />
-          </label>
-          <button
-            type="button"
-            class="w-full rounded-xl bg-brand-600 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-            :disabled="savingDetails"
-            @click="saveDetails"
-          >
-            {{ savingDetails ? 'Saving…' : 'Save Details' }}
-          </button>
+          <AppField label="Low Stock Threshold" for="detail-threshold">
+            <input id="detail-threshold" v-model.number="lowStockThreshold" type="number" min="0" class="field-input" />
+          </AppField>
+          <AppButton block size="sm" :loading="savingDetails" @click="saveDetails">
+            {{ savingDetails ? 'Saving' : 'Save Details' }}
+          </AppButton>
         </div>
-      </section>
+      </AppCard>
 
-      <section class="rounded-2xl border border-gray-100 bg-white p-4">
-        <h2 class="mb-1 text-sm font-semibold text-gray-700">Current Stock</h2>
-        <p class="text-3xl font-bold tabular-nums text-gray-900">{{ product.stock }}</p>
-      </section>
+      <AppCard>
+        <h2 class="mb-1 text-sm font-semibold text-ink-muted">Current Stock</h2>
+        <p class="text-3xl font-bold tabular-nums text-ink">{{ product.stock }}</p>
+      </AppCard>
 
-      <section class="rounded-2xl border border-gray-100 bg-white p-4">
-        <h2 class="mb-3 text-sm font-semibold text-gray-700">Receive Stock</h2>
+      <AppCard>
+        <h2 class="mb-3 text-sm font-semibold text-ink-muted">Receive Stock</h2>
         <div class="flex gap-2">
-          <input v-model.number="restockQty" type="number" min="1" placeholder="Quantity received" class="flex-1 rounded-lg border border-gray-200 px-3 py-2" />
-          <button
-            type="button"
-            class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-            :disabled="restocking || !restockQty"
-            @click="restock"
-          >
+          <input
+            v-model.number="restockQty"
+            type="number"
+            min="1"
+            placeholder="Quantity received"
+            class="field-input flex-1"
+          />
+          <AppButton size="sm" :loading="restocking" :disabled="!restockQty" @click="restock">
             + Add
-          </button>
+          </AppButton>
         </div>
-      </section>
+      </AppCard>
 
-      <section class="rounded-2xl border border-gray-100 bg-white p-4">
-        <h2 class="mb-3 text-sm font-semibold text-gray-700">Inventory Adjustment</h2>
+      <AppCard>
+        <h2 class="mb-3 text-sm font-semibold text-ink-muted">Inventory Adjustment</h2>
         <div class="space-y-2">
-          <select v-model="adjustType" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm">
+          <select v-model="adjustType" class="field-input text-sm">
             <option value="DAMAGE">Damaged</option>
             <option value="EXPIRED">Expired</option>
             <option value="MISSING">Missing</option>
@@ -168,23 +195,18 @@ async function deactivate() {
             v-model.number="adjustQty"
             type="number"
             :placeholder="adjustType === 'ADJUSTMENT' ? 'Change (e.g. -2 or 3)' : 'Quantity'"
-            class="w-full rounded-lg border border-gray-200 px-3 py-2"
+            class="field-input"
           />
-          <input v-model="adjustReason" type="text" placeholder="Reason" class="w-full rounded-lg border border-gray-200 px-3 py-2" />
-          <button
-            type="button"
-            class="w-full rounded-xl bg-gray-800 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-            :disabled="adjusting"
-            @click="adjust"
-          >
+          <input v-model="adjustReason" type="text" placeholder="Reason" class="field-input" />
+          <AppButton variant="secondary" block size="sm" :loading="adjusting" @click="adjust">
             Save Adjustment
-          </button>
+          </AppButton>
         </div>
-      </section>
+      </AppCard>
 
-      <button type="button" class="w-full py-2 text-sm font-medium text-danger-600" @click="deactivate">
+      <AppButton variant="danger" block :loading="deactivating" @click="deactivate">
         Deactivate Product
-      </button>
+      </AppButton>
     </div>
   </div>
 </template>

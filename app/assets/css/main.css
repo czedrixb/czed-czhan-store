@@ -1,18 +1,84 @@
 @import 'tailwindcss';
 
 @theme {
+  /* Brand green. Locked to nuxt.config.ts theme_color / PWA manifest - do not
+     change #16a34a without updating both. */
   --color-brand-50: #f0fdf4;
   --color-brand-100: #dcfce7;
   --color-brand-200: #bbf7d0;
+  --color-brand-300: #86efac;
+  --color-brand-400: #4ade80;
   --color-brand-500: #22c55e;
   --color-brand-600: #16a34a;
   --color-brand-700: #15803d;
+  --color-brand-800: #166534;
+  --color-brand-900: #14532d;
+
+  /* One neutral temperature (slightly green, matching the brand) used for
+     every surface, border, and ink in the app - replaces the mix of a
+     green-tinted body background against cool Tailwind gray-* utilities. */
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #f7f9f7;
+  --color-neutral-100: #eef2ef;
+  --color-neutral-200: #e1e7e2;
+  --color-neutral-300: #c8d2ca;
+  --color-neutral-400: #9fada2;
+  --color-neutral-500: #728077;
+  --color-neutral-600: #566058;
+  --color-neutral-700: #414944;
+  --color-neutral-800: #2b302c;
+  --color-neutral-900: #1a1d1a;
+
+  /* Semantic surface / ink aliases so pages stop hardcoding ramp steps. */
+  --color-surface: var(--color-neutral-0);
+  --color-surface-sunken: var(--color-neutral-50);
+  --color-surface-raised: var(--color-neutral-0);
+  --color-line: var(--color-neutral-200);
+  --color-line-strong: var(--color-neutral-300);
+  --color-ink: var(--color-neutral-900);
+  --color-ink-muted: var(--color-neutral-600);
+  --color-ink-subtle: var(--color-neutral-500);
+
+  /* Status families. Each is a distinct hue family, not a reused brand tint,
+     so a success message never reads as "just another green panel". */
+  --color-success-50: #f0fdf4;
+  --color-success-500: #22c55e;
+  --color-success-600: #16a34a;
+  --color-success-700: #15803d;
+
   --color-danger-50: #fef2f2;
+  --color-danger-100: #fee2e2;
   --color-danger-500: #ef4444;
   --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+
   --color-warn-50: #fffbeb;
+  --color-warn-100: #fef3c7;
   --color-warn-500: #f59e0b;
   --color-warn-600: #d97706;
+  --color-warn-700: #b45309;
+
+  --color-info-50: #f1f5f9;
+  --color-info-100: #e2e8f0;
+  --color-info-500: #64748b;
+  --color-info-600: #475569;
+  --color-info-700: #334155;
+
+  /* Shape Consistency Lock: one radius scale, used everywhere. */
+  --radius-control: 12px;
+  --radius-card: 16px;
+  --radius-pill: 9999px;
+
+  /* Elevation, tinted to the neutral hue instead of pure black. */
+  --shadow-card: 0 1px 2px 0 rgb(26 29 26 / 0.04), 0 1px 3px 0 rgb(26 29 26 / 0.06);
+  --shadow-raised: 0 4px 12px -2px rgb(26 29 26 / 0.10), 0 2px 4px -2px rgb(26 29 26 / 0.06);
+  --shadow-sheet: 0 -8px 30px -4px rgb(26 29 26 / 0.18);
+
+  /* Motion tokens. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 280ms;
 }
 
 html,
@@ -22,13 +88,40 @@ body,
 }
 
 body {
-  background-color: #f8faf9;
-  color: #111827;
+  background-color: var(--color-surface-sunken);
+  color: var(--color-ink);
   -webkit-tap-highlight-color: transparent;
 }
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+/* Shared input treatment so every AppField control looks identical without
+   repeating the same long utility string in every page. */
+.field-input {
+  width: 100%;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--color-line);
+  background-color: var(--color-surface);
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  color: var(--color-ink);
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+.field-input:focus-visible {
+  outline: none;
+  border-color: var(--color-brand-600);
+  box-shadow: 0 0 0 3px var(--color-brand-100);
+}
+.field-input::placeholder {
+  color: var(--color-neutral-400);
+}
+.field-input--with-leading-icon {
+  /* Keep the placeholder clear of a 20px icon positioned 16px from the
+     control edge, with a 16px gap for legibility. This lives after Tailwind's
+     utilities so it cannot be reset by the base .field-input padding rule. */
+  padding-left: 3.25rem;
 }
 
 .safe-bottom {
@@ -37,4 +130,97 @@ body {
 
 .safe-top {
   padding-top: env(safe-area-inset-top);
+}
+
+/* Tactile press feedback for buttons and tappable rows. Feedback-motivated:
+   confirms a tap registered before the network response arrives. */
+.press {
+  transition: transform var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+.press:active {
+  transform: scale(0.98);
+}
+
+/* Visible, consistent focus ring - keyboard and switch-access users had no
+   focus indicator anywhere in the app before this. */
+.focus-ring {
+  outline: none;
+}
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+  border-radius: var(--radius-control);
+}
+
+/* Skeleton shimmer for loading states. Gated like every other animation
+   below by prefers-reduced-motion. */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--color-neutral-100) 25%, var(--color-neutral-200) 37%, var(--color-neutral-100) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* Staggered list entry (search results, cart lines, receipts). Driven by a
+   --i custom property set per-item; state-transition motivated: shows what
+   just changed rather than snapping the whole list in at once. */
+@keyframes list-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.list-enter-item {
+  animation: list-enter var(--dur-slow) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 30ms);
+}
+
+/* One-shot emphasis for the change-due figure the cashier reads aloud. */
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.92); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.pop-in {
+  animation: pop-in var(--dur-slow) var(--ease-out) both;
+}
+
+/* Toast slide-up + fade. */
+.toast-enter-active,
+.toast-leave-active {
+  transition: transform var(--dur-base) var(--ease-out), opacity var(--dur-base) var(--ease-out);
+}
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateY(12px) scale(0.98);
+}
+.toast-leave-active {
+  position: absolute;
+}
+
+/* Page cross-fade. */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+.page-enter-from,
+.page-leave-to {
+  opacity: 0;
+}
+
+/* Global reduced-motion kill switch: collapse every transition/animation
+   above to effectively instant, per skill Section 6.B. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .press:active {
+    transform: none;
+  }
 }

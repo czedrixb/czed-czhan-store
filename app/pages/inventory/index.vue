@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { PhMagnifyingGlass, PhPackage, PhPlus } from '@phosphor-icons/vue'
 import type { Product } from '~/types'
+
+const toast = useToast()
 
 const search = ref('')
 const lowStockOnly = ref(false)
@@ -17,6 +20,8 @@ async function load() {
         lowStock: lowStockOnly.value ? 'true' : undefined,
       },
     })
+  } catch (err: unknown) {
+    toast.error(apiErrorMessage(err, 'Could not load inventory'))
   } finally {
     loading.value = false
   }
@@ -38,36 +43,42 @@ function status(p: Product) {
   <div>
     <PageHeader title="Inventory">
       <template #actions>
-        <NuxtLink to="/products/new" class="absolute right-4 top-4 text-sm font-semibold text-brand-600">+ Add Product</NuxtLink>
+        <NuxtLink to="/products/new" class="focus-ring absolute right-4 top-4 flex items-center gap-1 text-sm font-semibold text-brand-600">
+          <PhPlus class="h-4 w-4" weight="bold" />
+          Add Product
+        </NuxtLink>
       </template>
     </PageHeader>
 
     <div class="space-y-3 px-4 py-4">
-      <input
-        v-model="search"
-        type="search"
-        placeholder="Search inventory..."
-        class="w-full rounded-xl border border-gray-200 px-4 py-3 text-base"
-      />
+      <div class="relative">
+        <PhMagnifyingGlass class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-subtle" />
+        <input
+          v-model="search"
+          type="search"
+          placeholder="Search inventory..."
+          class="field-input field-input--with-leading-icon"
+        />
+      </div>
 
-      <label class="flex items-center gap-2 text-sm text-gray-600">
-        <input v-model="lowStockOnly" type="checkbox" class="h-4 w-4 rounded border-gray-300" />
+      <label class="flex items-center gap-2 text-sm text-ink-muted">
+        <input v-model="lowStockOnly" type="checkbox" class="h-4 w-4 rounded border-line-strong text-brand-600 focus-ring" />
         Low stock only
       </label>
 
-      <div v-if="loading" class="py-12 text-center text-gray-400">Loading…</div>
-      <p v-else-if="!products.length" class="py-12 text-center text-gray-400">No products found.</p>
+      <AppSkeleton v-if="loading" variant="list" />
+      <AppEmpty v-else-if="!products.length" :icon="PhPackage" message="No products found." />
 
-      <ul v-else class="divide-y divide-gray-100 rounded-2xl border border-gray-100 bg-white">
-        <li v-for="p in products" :key="p.id">
-          <NuxtLink :to="`/products/${p.id}`" class="flex items-center justify-between px-4 py-3 active:bg-gray-50">
+      <ul v-else class="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface">
+        <li v-for="(p, i) in products" :key="p.id" class="list-enter-item" :style="{ '--i': i }">
+          <NuxtLink :to="`/products/${p.id}`" class="focus-ring flex items-center justify-between px-4 py-3 active:bg-neutral-50">
             <div>
-              <p class="font-medium text-gray-900">{{ p.name }}<span v-if="p.variant" class="text-gray-500"> · {{ p.variant }}</span></p>
+              <p class="font-medium text-ink">{{ p.name }}<span v-if="p.variant" class="text-ink-subtle"> · {{ p.variant }}</span></p>
               <p v-if="p.costPrice === null || p.sellingPrice === null" class="text-xs text-warn-600">Needs pricing</p>
             </div>
             <div class="text-right">
-              <p class="font-semibold tabular-nums text-gray-900">{{ p.stock }}</p>
-              <p class="text-xs" :class="status(p) === 'Low' ? 'text-danger-600' : 'text-gray-400'">{{ status(p) }}</p>
+              <p class="font-semibold tabular-nums text-ink">{{ p.stock }}</p>
+              <p class="text-xs" :class="status(p) === 'Low' ? 'text-danger-600' : 'text-ink-subtle'">{{ status(p) }}</p>
             </div>
           </NuxtLink>
         </li>

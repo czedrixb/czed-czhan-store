@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { PhClockCounterClockwise } from '@phosphor-icons/vue'
+
 definePageMeta({ middleware: 'admin' })
 
 interface AuditEntry {
@@ -23,20 +25,20 @@ function formatTime(value: string) {
   <div>
     <PageHeader title="Audit Log" subtitle="Who did what, and when" />
     <div class="px-4 py-4">
-      <p v-if="status === 'pending'" class="py-12 text-center text-gray-400">Loading…</p>
-      <p v-else-if="!entries?.length" class="py-12 text-center text-gray-400">No activity recorded yet.</p>
+      <AppSkeleton v-if="status === 'pending'" variant="list" />
+      <AppEmpty v-else-if="!entries?.length" :icon="PhClockCounterClockwise" message="No activity recorded yet." />
       <ol v-else class="space-y-3" data-testid="audit-log">
-        <li v-for="entry in entries" :key="entry.id" class="rounded-2xl border border-gray-100 bg-white p-4">
+        <li v-for="(entry, i) in entries" :key="entry.id" class="list-enter-item rounded-[var(--radius-card)] border border-line bg-surface p-4" :style="{ '--i': i }">
           <div class="flex items-start justify-between gap-3">
             <div>
-              <p class="font-medium text-gray-900">{{ entry.description }}</p>
+              <p class="font-medium text-ink">{{ entry.description }}</p>
               <p class="mt-1 text-sm font-semibold text-brand-700" data-testid="audit-actor">
-                {{ entry.displayName }} <span class="font-normal text-gray-500">@{{ entry.username }}</span>
+                {{ entry.displayName }} <span class="font-normal text-ink-subtle">@{{ entry.username }}</span>
               </p>
             </div>
-            <span class="rounded-full bg-gray-100 px-2 py-1 text-[10px] font-bold tracking-wide text-gray-600">{{ entry.action }}</span>
+            <AppBadge tone="neutral">{{ entry.action }}</AppBadge>
           </div>
-          <time class="mt-2 block text-xs text-gray-400" :datetime="entry.createdAt">{{ formatTime(entry.createdAt) }}</time>
+          <time class="mt-2 block text-xs text-ink-subtle" :datetime="entry.createdAt">{{ formatTime(entry.createdAt) }}</time>
         </li>
       </ol>
     </div>

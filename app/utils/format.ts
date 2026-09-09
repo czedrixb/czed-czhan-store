@@ -33,3 +33,10 @@ export function formatTimeLabel(value: string | Date): string {
   const date = typeof value === 'string' ? new Date(value) : value
   return date.toLocaleTimeString('en-PH', { timeZone: STORE_TZ, hour: 'numeric', minute: '2-digit' })
 }
+
+// Every mutation catch block needs to pull a human-readable message out of a
+// $fetch error. This was copy-pasted inline in 8+ places; centralized here.
+export function apiErrorMessage(err: unknown, fallback: string): string {
+  const message = (err as { data?: { statusMessage?: string } })?.data?.statusMessage
+  return message || fallback
+}

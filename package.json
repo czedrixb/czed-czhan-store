@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",
+    "@phosphor-icons/vue": "^2.2.1",
     "@vite-pwa/nuxt": "^1.1.1",
     "drizzle-orm": "^0.45.2",
     "exceljs": "^4.4.0",

@@ -240,7 +240,8 @@ test('voiding a multi-item receipt restores stock for every line', async ({ page
   await expect(page.getByTestId('sale-summary')).toContainText('Sale complete')
 
   await page.getByTestId('void-sale').click()
-  await expect(page.getByTestId('sale-summary')).toContainText('Voided — stock restored')
+  await page.getByTestId('confirm-accept').click()
+  await expect(page.getByTestId('sale-summary')).toContainText('Voided. Stock restored.')
 
   const productA = await (await adminRequest.get('/api/products')).json()
   const a = productA.find((p: { name: string }) => p.name === 'VoidCartA')
@@ -282,7 +283,8 @@ test('voiding a just-completed sale restores stock', async ({ page, request: adm
   await expect(page.getByTestId('summary-stock')).toContainText('Stock: 10 → 9')
 
   await page.getByTestId('void-sale').click()
-  await expect(page.getByTestId('sale-summary')).toContainText('Voided — stock restored')
+  await page.getByTestId('confirm-accept').click()
+  await expect(page.getByTestId('sale-summary')).toContainText('Voided. Stock restored.')
   await expect(page.getByTestId('void-sale')).toHaveCount(0)
 
   const refreshed = await (await adminRequest.get(`/api/products/${product.id}`)).json()

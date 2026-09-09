@@ -1,6 +1,19 @@
 import { test, expect } from '@playwright/test'
 import { createProduct } from './helpers'
 
+test('inventory search placeholder clears its leading icon', async ({ page }) => {
+  await page.goto('/inventory')
+
+  const search = page.getByPlaceholder('Search inventory...')
+  await expect(search).toBeVisible()
+
+  await expect(search).toHaveCSS('padding-left', '52px')
+  const [searchBox, iconBox] = await Promise.all([search.boundingBox(), page.locator('.relative > svg').boundingBox()])
+  expect(searchBox).not.toBeNull()
+  expect(iconBox).not.toBeNull()
+  expect(searchBox!.x + 52).toBeGreaterThan(iconBox!.x + iconBox!.width + 12)
+})
+
 test('receiving stock increases the product quantity', async ({ page, request }) => {
   const product = await createProduct(request, { name: 'RestockMe', stock: 5 })
 
@@ -31,6 +44,7 @@ test('a weekly inventory count computes differences and applies them on completi
   await expect(row.locator('td').nth(3)).toHaveText('-3')
 
   await page.getByTestId('complete-count').click()
+  await page.getByTestId('confirm-accept').click()
   await expect(page.getByText('Completed')).toBeVisible()
 
   const refreshed = await (await request.get(`/api/products/${product.id}`)).json()

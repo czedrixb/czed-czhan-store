@@ -1,11 +1,22 @@
 <script setup lang="ts">
+import { PhClipboardText } from '@phosphor-icons/vue'
 import type { InventoryCount } from '~/types'
+
+const toast = useToast()
 
 const counts = ref<InventoryCount[]>([])
 const starting = ref(false)
+const loading = ref(false)
 
 async function load() {
-  counts.value = await $fetch<InventoryCount[]>('/api/counts')
+  loading.value = true
+  try {
+    counts.value = await $fetch<InventoryCount[]>('/api/counts')
+  } catch (err: unknown) {
+    toast.error(apiErrorMessage(err, 'Could not load inventory counts'))
+  } finally {
+    loading.value = false
+  }
 }
 onMounted(load)
 
@@ -14,7 +25,8 @@ async function startCount() {
   try {
     const created = await $fetch<InventoryCount>('/api/counts', { method: 'POST' })
     await navigateTo(`/inventory/count/${created.id}`)
-  } finally {
+  } catch (err: unknown) {
+    toast.error(apiErrorMessage(err, 'Could not start a new count'))
     starting.value = false
   }
 }
@@ -25,32 +37,25 @@ async function startCount() {
     <PageHeader title="Inventory Count" />
 
     <div class="space-y-4 px-4 py-4">
-      <button
-        type="button"
-        class="w-full rounded-xl bg-brand-600 py-3 text-sm font-semibold text-white disabled:opacity-50"
-        :disabled="starting"
-        @click="startCount"
-      >
-        {{ starting ? 'Starting…' : '+ Start New Count' }}
-      </button>
+      <AppButton block :loading="starting" @click="startCount">
+        {{ starting ? 'Starting' : '+ Start New Count' }}
+      </AppButton>
 
-      <ul v-if="counts.length" class="divide-y divide-gray-100 rounded-2xl border border-gray-100 bg-white">
-        <li v-for="c in counts" :key="c.id">
-          <NuxtLink :to="`/inventory/count/${c.id}`" class="flex items-center justify-between px-4 py-3 active:bg-gray-50">
+      <AppSkeleton v-if="loading" variant="list" />
+      <ul v-else-if="counts.length" class="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface">
+        <li v-for="(c, i) in counts" :key="c.id" class="list-enter-item" :style="{ '--i': i }">
+          <NuxtLink :to="`/inventory/count/${c.id}`" class="focus-ring flex items-center justify-between px-4 py-3 active:bg-neutral-50">
             <div>
-              <p class="font-medium text-gray-900">{{ formatDateLabel(c.countDate) }}</p>
-              <p class="text-xs text-gray-400">{{ c.status === 'COMPLETED' ? 'Completed' : 'In progress' }}</p>
+              <p class="font-medium text-ink">{{ formatDateLabel(c.countDate) }}</p>
+              <p class="text-xs text-ink-subtle">{{ c.status === 'COMPLETED' ? 'Completed' : 'In progress' }}</p>
             </div>
-            <span
-              class="rounded-full px-2 py-1 text-xs font-medium"
-              :class="c.status === 'COMPLETED' ? 'bg-gray-100 text-gray-500' : 'bg-brand-50 text-brand-700'"
-            >
+            <AppBadge :tone="c.status === 'COMPLETED' ? 'neutral' : 'brand'">
               {{ c.status === 'COMPLETED' ? 'Done' : 'Open' }}
-            </span>
+            </AppBadge>
           </NuxtLink>
         </li>
       </ul>
-      <p v-else class="py-12 text-center text-gray-400">No inventory counts yet.</p>
+      <AppEmpty v-else :icon="PhClipboardText" message="No inventory counts yet." />
     </div>
   </div>
 </template>
