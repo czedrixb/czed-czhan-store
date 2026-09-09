@@ -9,7 +9,9 @@ test('daily and weekly reports reflect recorded sales', async ({ page, request }
 
   const product = await createProduct(request, { name: 'ReportCheck', costPrice: 300, sellingPrice: 500, stock: 20 })
   const sale = await (
-    await request.post('/api/sales', { data: { productId: product.id, quantity: 4 } })
+    await request.post('/api/sales', {
+      data: { items: [{ productId: product.id, quantity: 4 }], cashReceived: 2000, submissionKey: `report-check-${Date.now()}` },
+    })
   ).json()
   expect(sale).toMatchObject({ revenue: 2000, profit: 800 })
 

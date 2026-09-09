@@ -26,17 +26,21 @@ test('recording a sale calculates revenue/profit and deducts stock (critical pat
 
   await page.getByTestId('qty-increment').click()
   await page.getByTestId('qty-increment').click()
-  await expect(page.getByTestId('qty-value')).toHaveText('3')
+  await expect(page.getByTestId('qty-input')).toHaveValue('3')
 
-  await expect(page.getByTestId('sale-subtotal')).toHaveText('₱30.00')
-  await expect(page.getByTestId('sale-profit')).toHaveText('₱6.00')
+  await expect(page.getByTestId('sale-total')).toHaveText('₱30.00')
+
+  await page.getByTestId('cash-received').fill('50')
+  await expect(page.getByTestId('change-due')).toHaveText('₱20.00')
 
   await page.getByTestId('save-sale').click()
-  await expect(page.getByTestId('sale-toast')).toContainText('Stock: 28 → 25')
+  await expect(page.getByTestId('sale-summary')).toContainText('Sale complete')
+  await expect(page.getByTestId('summary-change')).toHaveText('₱20.00')
+  await expect(page.getByTestId('summary-stock')).toContainText('Stock: 28 → 25')
 
   const sales = await (await request.get('/api/sales', { params: { range: 'today' } })).json()
   const sale = sales.find((s: { productName: string }) => s.productName === 'CandyBar')
-  expect(sale).toMatchObject({ quantity: 3, revenue: 3000, profit: 600 })
+  expect(sale).toMatchObject({ quantity: 3, revenue: 3000, profit: 600, cashReceived: 5000, changeDue: 2000 })
 })
 
 test('a later price change does not recalculate an already-recorded sale', async ({ page, request }) => {
@@ -46,9 +50,10 @@ test('a later price change does not recalculate an already-recorded sale', async
   await page.getByTestId('product-search').fill('HistPrice')
   await page.getByTestId('search-result').first().click()
   await page.getByTestId('qty-increment').click()
-  await expect(page.getByTestId('sale-subtotal')).toHaveText('₱20.00')
+  await expect(page.getByTestId('sale-total')).toHaveText('₱20.00')
+  await page.getByTestId('cash-received').fill('20')
   await page.getByTestId('save-sale').click()
-  await expect(page.getByTestId('sale-toast')).toContainText('Stock: 10 → 8')
+  await expect(page.getByTestId('summary-stock')).toContainText('Stock: 10 → 8')
 
   await page.goto(`/products/${product.id}`)
   const sellingInput = page.getByLabel('Selling Price (₱)')

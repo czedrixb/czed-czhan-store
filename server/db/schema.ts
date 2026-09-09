@@ -76,8 +76,32 @@ export const products = pgTable(
   ],
 )
 
+export const saleTransactions = pgTable(
+  'sale_transactions',
+  {
+    id: serial('id').primaryKey(),
+    // Client-generated idempotency key. Nullable for historical rows; a
+    // repeated key returns the existing receipt instead of recording a duplicate.
+    submissionKey: text('submission_key'),
+    // Cash payment for the whole receipt. Nullable so historical rows
+    // backfilled from single-item sales remain valid without inventing payment values.
+    cashReceived: integer('cash_received'),
+    changeDue: integer('change_due'),
+    // Snapshots of the receipt total — never recalculated from current prices.
+    revenue: integer('revenue').notNull(),
+    profit: integer('profit').notNull(),
+    voidedAt: timestamp('voided_at', { withTimezone: true }),
+    soldAt: timestamp('sold_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('sale_transactions_submission_key_unique').on(table.submissionKey)],
+)
+
 export const sales = pgTable('sales', {
   id: serial('id').primaryKey(),
+  transactionId: integer('transaction_id')
+    .notNull()
+    .references(() => saleTransactions.id, { onDelete: 'restrict' }),
   productId: integer('product_id')
     .notNull()
     .references(() => products.id, { onDelete: 'restrict' }),
@@ -87,8 +111,6 @@ export const sales = pgTable('sales', {
   sellingPrice: integer('selling_price').notNull(),
   revenue: integer('revenue').notNull(),
   profit: integer('profit').notNull(),
-  voidedAt: timestamp('voided_at', { withTimezone: true }),
-  soldAt: timestamp('sold_at', { withTimezone: true }).notNull().defaultNow(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
 

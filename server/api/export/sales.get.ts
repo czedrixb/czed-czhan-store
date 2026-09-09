@@ -1,5 +1,5 @@
 import { and, asc, eq, gte, isNull, lt } from 'drizzle-orm'
-import { products, sales } from '../../db/schema'
+import { products, sales, saleTransactions } from '../../db/schema'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
 
   const rows = await db
     .select({
-      soldAt: sales.soldAt,
+      soldAt: saleTransactions.soldAt,
       productName: products.name,
       productVariant: products.variant,
       quantity: sales.quantity,
@@ -18,8 +18,15 @@ export default defineEventHandler(async (event) => {
     })
     .from(sales)
     .innerJoin(products, eq(products.id, sales.productId))
-    .where(and(gte(sales.soldAt, range.start), lt(sales.soldAt, range.end), isNull(sales.voidedAt)))
-    .orderBy(asc(sales.soldAt))
+    .innerJoin(saleTransactions, eq(saleTransactions.id, sales.transactionId))
+    .where(
+      and(
+        gte(saleTransactions.soldAt, range.start),
+        lt(saleTransactions.soldAt, range.end),
+        isNull(saleTransactions.voidedAt),
+      ),
+    )
+    .orderBy(asc(saleTransactions.soldAt))
 
   const title = `Sales ${storeDateKey(range.start)} to ${storeDateKey(new Date(range.end.getTime() - 1))}`
   const workbook = await buildSalesWorkbook(rows, title)

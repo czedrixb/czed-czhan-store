@@ -24,12 +24,41 @@ async function load() {
 watch(range, load)
 onMounted(load)
 
-const groups = computed(() => {
-  const byDay = new Map<string, Sale[]>()
+interface Receipt {
+  transactionId: number
+  soldAt: string
+  voidedAt: string | null
+  cashReceived: number | null
+  changeDue: number | null
+  lines: Sale[]
+}
+
+const receipts = computed(() => {
+  const byTransaction = new Map<number, Receipt>()
   for (const sale of sales.value) {
-    const key = formatDateLabel(sale.soldAt)
+    let receipt = byTransaction.get(sale.transactionId)
+    if (!receipt) {
+      receipt = {
+        transactionId: sale.transactionId,
+        soldAt: sale.soldAt,
+        voidedAt: sale.voidedAt,
+        cashReceived: sale.cashReceived,
+        changeDue: sale.changeDue,
+        lines: [],
+      }
+      byTransaction.set(sale.transactionId, receipt)
+    }
+    receipt.lines.push(sale)
+  }
+  return Array.from(byTransaction.values())
+})
+
+const groups = computed(() => {
+  const byDay = new Map<string, Receipt[]>()
+  for (const receipt of receipts.value) {
+    const key = formatDateLabel(receipt.soldAt)
     if (!byDay.has(key)) byDay.set(key, [])
-    byDay.get(key)!.push(sale)
+    byDay.get(key)!.push(receipt)
   }
   return Array.from(byDay.entries())
 })
@@ -37,8 +66,12 @@ const groups = computed(() => {
 const totalRevenue = computed(() => sales.value.reduce((sum, s) => sum + s.revenue, 0))
 const totalProfit = computed(() => sales.value.reduce((sum, s) => sum + s.profit, 0))
 
-async function voidSale(sale: Sale) {
-  await $fetch(`/api/sales/${sale.id}`, { method: 'DELETE' })
+function receiptTotal(receipt: Receipt) {
+  return receipt.lines.reduce((sum, l) => sum + l.revenue, 0)
+}
+
+async function voidReceipt(receipt: Receipt) {
+  await $fetch(`/api/sales/${receipt.transactionId}`, { method: 'DELETE' })
   load()
 }
 </script>
@@ -72,25 +105,34 @@ async function voidSale(sale: Sale) {
       <div v-else class="mt-4 space-y-5">
         <section v-for="[day, items] in groups" :key="day">
           <h2 class="mb-2 text-sm font-semibold text-gray-700">{{ day }}</h2>
-          <ul class="divide-y divide-gray-100 rounded-2xl border border-gray-100 bg-white">
-            <li v-for="sale in items" :key="sale.id" class="flex items-center justify-between px-4 py-3" :class="{ 'opacity-40': sale.voidedAt }">
-              <div>
-                <p class="font-medium text-gray-900">
-                  {{ sale.productName }}<span v-if="sale.productVariant" class="text-gray-500"> · {{ sale.productVariant }}</span>
-                  <span class="text-gray-400"> ×{{ sale.quantity }}</span>
+          <ul class="space-y-3">
+            <li
+              v-for="receipt in items"
+              :key="receipt.transactionId"
+              class="rounded-2xl border border-gray-100 bg-white px-4 py-3"
+              :class="{ 'opacity-40': receipt.voidedAt }"
+            >
+              <div v-for="line in receipt.lines" :key="line.id" class="flex items-center justify-between py-1">
+                <p class="text-sm text-gray-900">
+                  {{ line.productName }}<span v-if="line.productVariant" class="text-gray-500"> · {{ line.productVariant }}</span>
+                  <span class="text-gray-400"> ×{{ line.quantity }}</span>
                 </p>
-                <p class="text-xs text-gray-400">{{ formatTimeLabel(sale.soldAt) }} · Profit {{ formatPeso(sale.profit) }}</p>
+                <span class="tabular-nums text-gray-700">{{ formatPeso(line.revenue) }}</span>
               </div>
-              <div class="flex items-center gap-2">
-                <span class="font-semibold tabular-nums text-gray-900">{{ formatPeso(sale.revenue) }}</span>
-                <button
-                  v-if="!sale.voidedAt"
-                  type="button"
-                  class="text-xs font-medium text-danger-600"
-                  @click="voidSale(sale)"
-                >
-                  Void
-                </button>
+
+              <div class="mt-2 flex items-center justify-between border-t border-gray-100 pt-2">
+                <p class="text-xs text-gray-400">{{ formatTimeLabel(receipt.soldAt) }}</p>
+                <div class="flex items-center gap-2">
+                  <span class="font-semibold tabular-nums text-gray-900">{{ formatPeso(receiptTotal(receipt)) }}</span>
+                  <button
+                    v-if="!receipt.voidedAt"
+                    type="button"
+                    class="text-xs font-medium text-danger-600"
+                    @click="voidReceipt(receipt)"
+                  >
+                    Void
+                  </button>
+                </div>
               </div>
             </li>
           </ul>

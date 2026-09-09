@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { SessionResponse } from '~/types'
+
 const username = ref('')
 const password = ref('')
 const error = ref('')
@@ -9,11 +11,11 @@ async function submit() {
   loading.value = true
   error.value = ''
   try {
-    await $fetch('/api/auth/login', {
+    const res = await $fetch<SessionResponse>('/api/auth/login', {
       method: 'POST',
       body: { username: username.value.trim(), password: password.value },
     })
-    await navigateTo('/')
+    await navigateTo(res.user?.role === 'MEMBER' ? '/sales/new' : '/')
   } catch (err: unknown) {
     error.value = (err as { data?: { statusMessage?: string } })?.data?.statusMessage || 'Incorrect username or password'
     password.value = ''

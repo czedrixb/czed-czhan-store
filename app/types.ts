@@ -30,6 +30,7 @@ export interface Product {
 
 export interface Sale {
   id: number
+  transactionId: number
   productId: number
   productName: string
   productVariant: string
@@ -38,8 +39,39 @@ export interface Sale {
   sellingPrice: number
   revenue: number
   profit: number
+  cashReceived: number | null
+  changeDue: number | null
   voidedAt: string | null
   soldAt: string
+}
+
+export interface SaleReceiptLine {
+  id: number
+  transactionId: number
+  productId: number
+  productName: string
+  productVariant: string
+  quantity: number
+  costPrice: number
+  sellingPrice: number
+  revenue: number
+  profit: number
+  previousStock: number
+  newStock: number
+}
+
+export interface SaleReceipt {
+  id: number
+  submissionKey: string | null
+  cashReceived: number | null
+  changeDue: number | null
+  revenue: number
+  profit: number
+  voidedAt: string | null
+  soldAt: string
+  createdAt: string
+  alreadyRecorded?: boolean
+  lines: SaleReceiptLine[]
 }
 
 export interface DashboardSummary {
