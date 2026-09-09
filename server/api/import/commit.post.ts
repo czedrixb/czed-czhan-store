@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { products } from '../../db/schema'
 
 const commitSchema = z.object({
+  importStock: z.boolean().default(true),
   rows: z
     .array(
       z.object({
@@ -17,7 +18,7 @@ const commitSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  const { rows } = await readValidated(event, commitSchema)
+  const { rows, importStock } = await readValidated(event, commitSchema)
   const db = useDb()
   const user = requireUser(event)
 
@@ -51,7 +52,7 @@ export default defineEventHandler(async (event) => {
             .set({ ...priceUpdate, updatedAt: new Date() })
             .where(sql`${products.id} = ${existing.id}`)
         }
-        if (quantity !== existing.stock) {
+        if (importStock && quantity !== existing.stock) {
           await setAbsoluteStock(tx, {
             productId: existing.id,
             target: quantity,
@@ -69,10 +70,13 @@ export default defineEventHandler(async (event) => {
             costPrice: row.costPrice ?? null,
             sellingPrice: row.sellingPrice ?? null,
             stock: 0,
+            // Product-only imports stay out of low-stock alerts until their
+            // stock count is entered.
+            lowStockThreshold: importStock ? 5 : -1,
           })
           .returning()
 
-        if (quantity > 0) {
+        if (importStock && quantity > 0) {
           await applyStockChange(tx, {
             productId: createdProduct.id,
             delta: quantity,
@@ -88,7 +92,7 @@ export default defineEventHandler(async (event) => {
       userId: user.id,
       action: 'IMPORT',
       entityType: 'PRODUCT',
-      description: `Imported inventory: ${created} created, ${updated} updated, ${skipped} skipped`,
+      description: `Imported ${importStock ? 'inventory' : 'products only'}: ${created} created, ${updated} updated, ${skipped} skipped`,
     })
   })
 

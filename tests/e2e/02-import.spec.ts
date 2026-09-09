@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 const INVENTORY_XLSX = 'D:/Downloads/inventory-071326.xlsx'
 
-test('importing the real store spreadsheet creates products with forward-filled names and no prices', async ({ page, request }) => {
+test('product-only Excel import preserves spreadsheet quantities and prevents low-stock flags until stock is updated', async ({ page, request }) => {
   await page.goto('/settings')
 
   const fileInput = page.getByTestId('import-file-input')
@@ -12,6 +12,9 @@ test('importing the real store spreadsheet creates products with forward-filled 
   await expect(preview).toContainText('296 rows found')
   await expect(preview).toContainText('296 new')
   await expect(preview).toContainText('No prices found in this file')
+  await page.getByTestId('import-stock-toggle').uncheck()
+  await expect(page.getByTestId('import-stock-toggle')).not.toBeChecked()
+  await expect(preview).toContainText('turn it off to import products and prices only')
 
   await page.getByTestId('confirm-import').click()
   await page.getByTestId('confirm-accept').click()
@@ -30,7 +33,11 @@ test('importing the real store spreadsheet creates products with forward-filled 
   const anleneRows = await anlene.json()
   expect(anleneRows).toHaveLength(1)
   expect(anleneRows[0].variant).toBe('')
-  expect(anleneRows[0].stock).toBe(14)
+  expect(anleneRows[0].stock).toBe(0)
+  expect(anleneRows[0].lowStockThreshold).toBe(-1)
+
+  const lowStock = await request.get('/api/products', { params: { lowStock: 'true' } })
+  expect(await lowStock.json()).toHaveLength(0)
 
   // No prices were in the sheet, so every imported product needs pricing.
   const needsPricing = await request.get('/api/products', { params: { needsPricing: 'true' } })

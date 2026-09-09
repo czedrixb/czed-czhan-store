@@ -49,15 +49,15 @@ const TONE_ICON_CLASS = { danger: 'text-danger-600 bg-danger-50', warn: 'text-wa
   <dialog
     ref="dialogRef"
     data-testid="confirm-dialog"
-    class="m-0 max-h-none w-full max-w-md border-0 bg-transparent p-0 backdrop:bg-neutral-900/50"
-    style="position: fixed; inset: auto 0 0 0"
+    class="m-0 max-h-none h-full w-full max-w-none border-0 bg-transparent p-0 backdrop:bg-neutral-900/50"
+    style="position: fixed; inset: 0"
     @cancel="onCancel"
     @click="onBackdropClick"
   >
     <Transition name="sheet-panel" @after-leave="afterLeave">
       <div
         v-if="visible && current"
-        class="sheet-panel safe-bottom w-full rounded-t-[var(--radius-card)] bg-surface p-5"
+        class="sheet-panel safe-bottom absolute inset-x-0 bottom-0 mx-auto w-full max-w-md rounded-t-[var(--radius-card)] bg-surface p-5"
         style="box-shadow: var(--shadow-sheet)"
         role="alertdialog"
         :aria-labelledby="`confirm-title-${current.id}`"
