@@ -1,3 +1,20 @@
+export type UserRole = 'ADMIN' | 'MEMBER'
+
+export interface StoreUser {
+  id: number
+  username: string
+  displayName: string
+  role: UserRole
+  isActive: boolean
+  mustChangePassword: boolean
+  createdAt: string
+}
+
+export interface SessionResponse {
+  authenticated: boolean
+  user: Pick<StoreUser, 'id' | 'username' | 'displayName' | 'role' | 'mustChangePassword'> | null
+}
+
 export interface Product {
   id: number
   name: string

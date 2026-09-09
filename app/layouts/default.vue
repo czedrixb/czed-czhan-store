@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const route = useRoute()
-const showNav = computed(() => route.path !== '/login')
+const showNav = computed(() => route.path !== '/login' && route.path !== '/settings/password')
 </script>
 
 <template>

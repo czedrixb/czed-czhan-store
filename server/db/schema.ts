@@ -9,6 +9,9 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core'
 
+export const userRoles = ['ADMIN', 'MEMBER'] as const
+export type UserRole = (typeof userRoles)[number]
+
 export const users = pgTable(
   'users',
   {
@@ -17,6 +20,8 @@ export const users = pgTable(
     displayName: text('display_name').notNull(),
     passwordHash: text('password_hash').notNull(),
     isActive: boolean('is_active').notNull().default(true),
+    role: text('role', { enum: userRoles }).notNull().default('MEMBER'),
+    mustChangePassword: boolean('must_change_password').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

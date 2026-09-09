@@ -18,11 +18,24 @@ export default defineNitroPlugin(async () => {
         username,
         displayName: String(config.storeDisplayName).trim() || username,
         passwordHash: config.storePasswordHash,
+        role: 'ADMIN',
+        isActive: true,
+        mustChangePassword: false,
       })
     } else {
+      // Re-pinned on every boot: this account is the documented owner-recovery
+      // path (set STORE_PASSWORD_HASH and restart), so it must always come
+      // back as an active, unflagged admin — it cannot be demoted,
+      // deactivated, or left flagged from the UI while this env var is set.
       await db
         .update(users)
-        .set({ passwordHash: config.storePasswordHash, updatedAt: new Date() })
+        .set({
+          passwordHash: config.storePasswordHash,
+          role: 'ADMIN',
+          isActive: true,
+          mustChangePassword: false,
+          updatedAt: new Date(),
+        })
         .where(sql`lower(${users.username}) = lower(${username})`)
     }
   }
