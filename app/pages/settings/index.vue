@@ -11,6 +11,9 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const uploading = ref(false)
 const preview = ref<ImportPreview | null>(null)
 const committing = ref(false)
+// Stock is part of an inventory import. Keeping this on by default prevents
+// quantity-bearing spreadsheets from accidentally creating zero-stock products.
+const importStock = ref(true)
 const result = ref<{ created: number; updated: number; skipped: number } | null>(null)
 const error = ref('')
 
@@ -39,7 +42,9 @@ async function commitImport() {
 
   const ok = await confirm({
     title: 'Import this spreadsheet?',
-    body: `This creates ${preview.value.toCreate} products and rewrites stock on ${preview.value.toUpdate} existing ones.`,
+    body: importStock.value
+      ? `This creates ${preview.value.toCreate} products and sets their stock to the quantities in the spreadsheet. It also rewrites stock on ${preview.value.toUpdate} existing ones.`
+      : `This creates ${preview.value.toCreate} products without changing stock. New products will start at 0 until stock is updated.`,
     confirmLabel: 'Import',
     tone: 'warn',
   })
@@ -48,7 +53,7 @@ async function commitImport() {
   committing.value = true
   error.value = ''
   try {
-    result.value = await $fetch('/api/import/commit', { method: 'POST', body: { rows: preview.value.rows } })
+    result.value = await $fetch('/api/import/commit', { method: 'POST', body: { rows: preview.value.rows, importStock: importStock.value } })
     preview.value = null
     toast.success('Inventory imported.')
   } catch (err: unknown) {
@@ -139,6 +144,10 @@ async function logout() {
           <div v-if="preview" class="mt-3 space-y-2 rounded-lg bg-surface-sunken p-3 text-sm" data-testid="import-preview">
             <p>{{ preview.totalRows }} rows found. {{ preview.toCreate }} new, {{ preview.toUpdate }} to update.</p>
             <p v-if="!preview.hasPrices" class="text-warn-600">No prices found in this file. Imported products will need pricing.</p>
+            <label class="flex items-start gap-2 text-xs text-ink-muted">
+              <input v-model="importStock" type="checkbox" class="mt-0.5" data-testid="import-stock-toggle" />
+              <span>Import spreadsheet stock quantities. Leave this on to set each product to the quantity in the spreadsheet; turn it off to import products and prices only.</span>
+            </label>
             <AppButton block size="sm" :loading="committing" data-testid="confirm-import" @click="commitImport">
               {{ committing ? 'Importing' : 'Confirm Import' }}
             </AppButton>
