@@ -1,6 +1,35 @@
 <script setup lang="ts">
 import type { ImportPreview } from '~/types'
 
+interface Account {
+  id: number
+  username: string
+  displayName: string
+  isActive: boolean
+}
+
+const { data: session } = await useFetch<{ authenticated: boolean; user: Account | null }>('/api/auth/session')
+const { data: accounts, refresh: refreshAccounts } = await useFetch<Account[]>('/api/users')
+const showAccountForm = ref(false)
+const accountForm = reactive({ displayName: '', username: '', password: '' })
+const accountError = ref('')
+const creatingAccount = ref(false)
+
+async function createAccount() {
+  creatingAccount.value = true
+  accountError.value = ''
+  try {
+    await $fetch('/api/users', { method: 'POST', body: accountForm })
+    Object.assign(accountForm, { displayName: '', username: '', password: '' })
+    showAccountForm.value = false
+    await refreshAccounts()
+  } catch (err: unknown) {
+    accountError.value = (err as { data?: { statusMessage?: string } })?.data?.statusMessage || 'Could not create account'
+  } finally {
+    creatingAccount.value = false
+  }
+}
+
 const fileInput = ref<HTMLInputElement | null>(null)
 const uploading = ref(false)
 const preview = ref<ImportPreview | null>(null)
@@ -51,6 +80,39 @@ async function logout() {
     <PageHeader title="More" />
 
     <div class="space-y-6 px-4 py-4">
+      <section class="space-y-2">
+        <h2 class="text-sm font-semibold text-gray-700">Account</h2>
+        <div class="rounded-xl border border-gray-200 bg-white px-4 py-3">
+          <p class="text-sm font-medium text-gray-900">{{ session?.user?.displayName }}</p>
+          <p class="text-xs text-gray-500">@{{ session?.user?.username }}</p>
+        </div>
+        <NuxtLink to="/settings/audit" class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700">
+          <span>View Audit Log</span><span aria-hidden="true" class="text-gray-400">›</span>
+        </NuxtLink>
+      </section>
+
+      <section class="space-y-2">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-gray-700">Store Accounts</h2>
+          <button type="button" class="text-sm font-semibold text-brand-600" @click="showAccountForm = !showAccountForm">{{ showAccountForm ? 'Cancel' : '+ Add' }}</button>
+        </div>
+        <div v-if="showAccountForm" class="space-y-3 rounded-xl border border-gray-200 bg-white p-4">
+          <input v-model="accountForm.displayName" type="text" placeholder="Display name" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+          <input v-model="accountForm.username" type="text" placeholder="Username" autocomplete="off" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+          <input v-model="accountForm.password" type="password" placeholder="Password (at least 6 characters)" autocomplete="new-password" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+          <p v-if="accountError" class="text-sm text-danger-600">{{ accountError }}</p>
+          <button type="button" class="w-full rounded-lg bg-brand-600 py-2 text-sm font-semibold text-white disabled:opacity-50" :disabled="creatingAccount || !accountForm.displayName || !accountForm.username || accountForm.password.length < 6" @click="createAccount">
+            {{ creatingAccount ? 'Creating…' : 'Create Account' }}
+          </button>
+        </div>
+        <ul class="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
+          <li v-for="account in accounts" :key="account.id" class="px-4 py-3">
+            <p class="text-sm font-medium text-gray-900">{{ account.displayName }}</p>
+            <p class="text-xs text-gray-500">@{{ account.username }}</p>
+          </li>
+        </ul>
+      </section>
+
       <section class="space-y-2">
         <h2 class="text-sm font-semibold text-gray-700">Products</h2>
         <NuxtLink to="/products/new" class="block rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700">

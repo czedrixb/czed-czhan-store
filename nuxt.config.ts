@@ -21,6 +21,9 @@ export default defineNuxtConfig({
     databaseUrl: process.env.DATABASE_URL || '',
     pgliteDir: process.env.PGLITE_DIR || '.data/pglite',
     storePinHash: process.env.STORE_PIN_HASH || '',
+    storeUsername: process.env.STORE_USERNAME || 'admin',
+    storeDisplayName: process.env.STORE_DISPLAY_NAME || 'Administrator',
+    storePasswordHash: process.env.STORE_PASSWORD_HASH || process.env.STORE_PIN_HASH || '',
     sessionSecret: process.env.SESSION_SECRET || 'dev-only-insecure-secret',
   },
 

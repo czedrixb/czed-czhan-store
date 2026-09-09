@@ -11,12 +11,12 @@ Built with Nuxt 4 + Tailwind 4 + Drizzle ORM.
 ```bash
 npm install
 cp .env.example .env
-npm run hash-pin -- <your-pin>   # paste the output into STORE_PIN_HASH in .env
+npm run hash-password -- <your-password>   # paste into STORE_PASSWORD_HASH in .env
 npm run dev
 ```
 
 Open http://localhost:3000, install as a PWA via "Add to Home Screen" on
-mobile, and enter your PIN.
+mobile, and sign in with the configured account.
 
 No database setup is required for local development — the app runs on an
 embedded [PGlite](https://pglite.dev) database stored in `.data/pglite/`
@@ -30,7 +30,9 @@ See `.env.example`. In short:
 |---|---|
 | `DATABASE_URL` | Leave unset for local dev (uses PGlite). Set to a Postgres/Supabase connection string in production. |
 | `PGLITE_DIR` | Where the embedded dev database is stored on disk. |
-| `STORE_PIN_HASH` | The shared store PIN, hashed. Generate with `npm run hash-pin -- <pin>`. |
+| `STORE_USERNAME` | Username for the first account created on an empty database. Defaults to `admin`. |
+| `STORE_DISPLAY_NAME` | Display name for the first account. Defaults to `Administrator`. |
+| `STORE_PASSWORD_HASH` | Password hash for the first account. Generate with `npm run hash-password -- <password>`. |
 | `SESSION_SECRET` | Random string used to sign the login session cookie. |
 
 ## Moving to Supabase + Vercel
@@ -41,7 +43,7 @@ development also run against a real Postgres database — only `DATABASE_URL`
 changes:
 
 1. Create a Supabase project and copy its Postgres connection string.
-2. Set `DATABASE_URL`, `STORE_PIN_HASH`, and `SESSION_SECRET` as environment
+2. Set `DATABASE_URL`, `STORE_USERNAME`, `STORE_DISPLAY_NAME`, `STORE_PASSWORD_HASH`, and `SESSION_SECRET` as environment
    variables in Vercel (and locally in `.env` if you want to test against it).
 3. Run `npm run db:migrate` to apply the schema to that database.
 4. Deploy to Vercel as a normal Nuxt app.
@@ -60,7 +62,7 @@ the client.
 | `npm run build` | Production build |
 | `npm run db:generate` | Generate a new Drizzle migration after editing `server/db/schema.ts` |
 | `npm run db:migrate` | Apply migrations (uses `DATABASE_URL` if set, otherwise PGlite) |
-| `npm run hash-pin -- <pin>` | Hash a PIN for `STORE_PIN_HASH` |
+| `npm run hash-password -- <password>` | Hash a password for `STORE_PASSWORD_HASH` |
 | `npm run test:unit` | Run unit tests (date/timezone logic) |
 | `npm run test:e2e` | Run the Playwright E2E suite against a disposable test database |
 

@@ -10,6 +10,7 @@ const createSaleSchema = z.object({
 export default defineEventHandler(async (event) => {
   const { productId, quantity } = await readValidated(event, createSaleSchema)
   const db = useDb()
+  const user = requireUser(event)
 
   const sale = await db.transaction(async (tx) => {
     const [product] = await tx.select().from(products).where(eq(products.id, productId))
@@ -40,6 +41,14 @@ export default defineEventHandler(async (event) => {
       delta: -quantity,
       type: 'SALE',
       saleId: created.id,
+    })
+
+    await recordAudit(tx, {
+      userId: user.id,
+      action: 'CREATE',
+      entityType: 'SALE',
+      entityId: created.id,
+      description: `Recorded sale of ${quantity} × ${product.name}${product.variant ? ` · ${product.variant}` : ''}`,
     })
 
     return { ...created, cost, previousStock, newStock, productName: product.name, productVariant: product.variant }
