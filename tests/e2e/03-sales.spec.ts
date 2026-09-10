@@ -76,3 +76,24 @@ test('the bottom tab bar is reachable on a phone-sized viewport', async ({ page 
   await nav.getByText('Stock', { exact: true }).click()
   await expect(page).toHaveURL(/\/inventory$/)
 })
+
+test('bottom navigation stays tappable after mobile sale products load', async ({ page, request }) => {
+  await createProduct(request, { name: `Sales Nav ${Date.now()}`, costPrice: 500, sellingPrice: 800, stock: 10 })
+  await Promise.all(Array.from({ length: 12 }, (_, index) => createProduct(request, {
+    name: `Scrollable Sale ${Date.now()} ${index}`,
+    costPrice: 500,
+    sellingPrice: 800,
+    stock: 10,
+  })))
+
+  await page.goto('/sales/new')
+  await expect(page.getByTestId('search-result').first()).toBeVisible()
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+  await expect(page.getByTestId('product-search')).toBeInViewport()
+
+  const screenshotPath = process.env.SALES_NAV_SCREENSHOT_PATH
+  if (screenshotPath) await page.screenshot({ path: screenshotPath, fullPage: true })
+
+  await page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Stock' }).tap()
+  await expect(page).toHaveURL('/inventory')
+})

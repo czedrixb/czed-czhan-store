@@ -279,7 +279,8 @@ onBeforeRouteLeave(async () => {
       </template>
 
       <template v-else>
-        <div class="relative">
+        <div class="sticky-search -mx-4 border-b border-line bg-surface-sunken px-4 pb-3">
+          <div class="relative">
           <PhMagnifyingGlass class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-subtle" />
           <input
             ref="searchInput"
@@ -289,15 +290,17 @@ onBeforeRouteLeave(async () => {
             class="field-input field-input--with-leading-icon"
             data-testid="product-search"
           />
+          </div>
         </div>
 
         <ul v-if="results.length" class="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface">
           <li v-for="(p, i) in results" :key="p.id" class="list-enter-item" :style="{ '--i': i }">
             <button
               type="button"
-              class="flex w-full items-center justify-between px-4 py-3 text-left active:bg-neutral-50"
+              class="relative z-10 flex w-full touch-manipulation items-center justify-between px-4 py-3 text-left active:bg-neutral-50"
               data-testid="search-result"
               @click="addToCart(p)"
+              @touchend.prevent="addToCart(p)"
             >
               <span>
                 <span class="font-medium text-ink">{{ p.name }}</span>

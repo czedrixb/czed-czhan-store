@@ -5,7 +5,7 @@ const showNav = computed(() => route.path !== '/login' && route.path !== '/setti
 
 <template>
   <div class="mx-auto flex min-h-screen max-w-md flex-col bg-surface-sunken">
-    <main class="flex-1" :class="showNav ? 'pb-20' : ''">
+    <main class="relative z-0 flex-1" :class="showNav ? 'pb-20' : ''">
       <slot />
     </main>
     <BottomNav v-if="showNav" />

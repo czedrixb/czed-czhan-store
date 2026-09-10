@@ -19,10 +19,11 @@ export default defineEventHandler(async (event) => {
   }
 
   const token = createSessionToken(config.sessionSecret, user.id)
+  const isHttps = getRequestURL(event).protocol === 'https:'
   setCookie(event, SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: isHttps,
     path: '/',
     maxAge: 30 * 24 * 60 * 60,
   })

@@ -22,15 +22,16 @@ const route = useRoute()
 
 <template>
   <nav
-    class="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-line bg-surface/95 backdrop-blur safe-bottom"
+    class="fixed inset-x-0 bottom-0 z-50 isolate mx-auto max-w-md border-t border-line bg-surface safe-bottom"
     aria-label="Primary"
   >
     <ul class="flex">
       <li v-for="tab in tabs" :key="tab.to" class="flex-1">
         <NuxtLink
           :to="tab.to"
-          class="focus-ring flex flex-col items-center gap-1 py-2 text-xs font-medium transition-colors duration-[var(--dur-base)]"
+          class="focus-ring relative z-10 flex touch-manipulation flex-col items-center gap-1 py-2 text-xs font-medium transition-colors duration-[var(--dur-base)]"
           :class="tab.match(route.path) ? 'text-brand-600' : 'text-ink-subtle active:text-ink-muted'"
+          @touchend.prevent="navigateTo(tab.to)"
         >
           <component
             :is="tab.icon"

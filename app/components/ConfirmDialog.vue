@@ -27,10 +27,6 @@ watch(visible, async (isVisible) => {
   cancelRef.value?.focus()
 })
 
-function afterLeave() {
-  dialogRef.value?.close()
-}
-
 function onCancel(event: Event) {
   // Fires for Esc-to-close on <dialog>. Treat it the same as tapping Cancel.
   event.preventDefault()
@@ -46,17 +42,17 @@ const TONE_ICON_CLASS = { danger: 'text-danger-600 bg-danger-50', warn: 'text-wa
 </script>
 
 <template>
-  <dialog
-    ref="dialogRef"
-    data-testid="confirm-dialog"
-    class="m-0 max-h-none h-full w-full max-w-none border-0 bg-transparent p-0 backdrop:bg-neutral-900/50"
-    style="position: fixed; inset: 0"
-    @cancel="onCancel"
-    @click="onBackdropClick"
-  >
-    <Transition name="sheet-panel" @after-leave="afterLeave">
+  <ClientOnly>
+    <dialog
+      v-if="visible && current"
+      ref="dialogRef"
+      data-testid="confirm-dialog"
+      class="m-0 max-h-none h-full w-full max-w-none border-0 bg-transparent p-0 backdrop:bg-neutral-900/50"
+      style="position: fixed; inset: 0"
+      @cancel="onCancel"
+      @click="onBackdropClick"
+    >
       <div
-        v-if="visible && current"
         class="sheet-panel safe-bottom absolute inset-x-0 bottom-0 mx-auto w-full max-w-md rounded-t-[var(--radius-card)] bg-surface p-5"
         style="box-shadow: var(--shadow-sheet)"
         role="alertdialog"
@@ -94,17 +90,6 @@ const TONE_ICON_CLASS = { danger: 'text-danger-600 bg-danger-50', warn: 'text-wa
           </button>
         </div>
       </div>
-    </Transition>
-  </dialog>
+    </dialog>
+  </ClientOnly>
 </template>
-
-<style scoped>
-.sheet-panel-enter-active,
-.sheet-panel-leave-active {
-  transition: transform var(--dur-base) var(--ease-out);
-}
-.sheet-panel-enter-from,
-.sheet-panel-leave-to {
-  transform: translateY(100%);
-}
-</style>

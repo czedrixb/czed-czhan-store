@@ -14,6 +14,34 @@ test('product search placeholder clears its leading icon', async ({ page }) => {
   expect(searchBox!.x + 52).toBeGreaterThan(iconBox!.x + iconBox!.width + 12)
 })
 
+test('products and bottom navigation stay tappable on a populated mobile inventory', async ({ page, request }) => {
+  const product = await createProduct(request, { name: `Nav Tap ${Date.now()}`, stock: 12 })
+  await Promise.all(Array.from({ length: 12 }, (_, index) => createProduct(request, {
+    name: `Scrollable Inventory ${Date.now()} ${index}`,
+    stock: 12,
+  })))
+
+  await page.goto('/inventory')
+  const productLink = page.getByRole('link', { name: new RegExp(product.name) })
+  await expect(productLink).toBeVisible()
+
+  const nav = page.getByRole('navigation', { name: 'Primary' })
+  await expect(nav).toBeVisible()
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+  await expect(page.getByPlaceholder('Search inventory...')).toBeInViewport()
+  const screenshotPath = process.env.NAV_SCREENSHOT_PATH
+  if (screenshotPath) await page.screenshot({ path: screenshotPath, fullPage: true })
+
+  await productLink.tap()
+  await expect(page).toHaveURL(`/products/${product.id}`)
+
+  await page.goto('/inventory')
+  await expect(page.getByRole('link', { name: new RegExp(product.name) })).toBeVisible()
+  await nav.getByRole('link', { name: 'Home' }).tap()
+
+  await expect(page).toHaveURL('/')
+})
+
 test('receiving stock increases the product quantity', async ({ page, request }) => {
   const product = await createProduct(request, { name: 'RestockMe', stock: 5 })
 
