@@ -1,61 +1,55 @@
 <script setup lang="ts">
 import { PhMagnifyingGlass, PhMinus, PhPlus, PhX } from '@phosphor-icons/vue'
 import type { Product, SaleReceipt } from '~/types'
-
-interface CartLine {
-  product: Product
-  quantity: number
-}
+import type { CartLine } from '~/composables/useCart'
 
 const toast = useToast()
 const { confirm } = useConfirm()
+// Shared across pages (useState-backed) so leaving /sales/new - a bottom-nav
+// tap, a forced auth redirect, a PWA reload - no longer discards the sale.
+const { lines: cart, cash: cashInput, submissionKey, clear: clearCartState } = useCart()
 
 const search = ref('')
 const results = ref<Product[]>([])
-const cart = ref<CartLine[]>([])
-const cashInput = ref('')
 const saving = ref(false)
 const voiding = ref(false)
 const errorMessage = ref('')
-const submissionKey = ref('')
 const completedSale = ref<SaleReceipt | null>(null)
 const searchInput = ref<HTMLInputElement | null>(null)
 let searchTimer: ReturnType<typeof setTimeout> | undefined
-// Bumped every time a load is *requested* (not when it starts fetching), so
-// an older request already in flight — e.g. the initial full-list load still
-// pending when the cashier starts typing — is invalidated immediately rather
-// than at some later, unpredictable point. Without this, a slow early
-// response can land after a newer, narrower search has already rendered,
-// silently replacing the correct results with the wrong ones.
+// Bumped every time a load is *requested*, so a slower, older response can't
+// land after a newer query has already rendered and silently replace the
+// correct results with the wrong ones.
 let loadGen = 0
 
 async function loadProducts() {
+  const query = search.value.trim()
+  if (!query) return
   const gen = loadGen
-  const data = await $fetch<Product[]>('/api/products', {
-    query: search.value.trim() ? { q: search.value.trim(), active: 'true' } : { active: 'true' },
-  })
+  const data = await $fetch<Product[]>('/api/products', { query: { q: query, active: 'true' } })
   if (gen === loadGen) results.value = data
 }
 
-function requestLoad(immediate = false) {
+function requestLoad() {
   loadGen++
   clearTimeout(searchTimer)
-  if (immediate) {
-    loadProducts()
-  } else {
-    searchTimer = setTimeout(loadProducts, 200)
+  if (!search.value.trim()) {
+    // Nothing typed: show nothing rather than the whole catalog, so adding a
+    // product (which clears the search box) leaves the cart in place instead
+    // of burying it under a freshly reloaded product list.
+    results.value = []
+    return
   }
+  searchTimer = setTimeout(loadProducts, 200)
 }
 
-watch(search, (value) => {
+watch(search, () => {
   // Clear stale matches the instant typing starts so a fast click can't land
-  // on a result left over from before the keystroke (e.g. the full default
-  // list, or a previous query) while the debounced search is still in flight.
-  if (value.trim()) results.value = []
+  // on a result left over from before the keystroke while the debounced
+  // search is still in flight.
+  results.value = []
   requestLoad()
 })
-
-onMounted(() => requestLoad(true))
 
 function addToCart(product: Product) {
   if (product.costPrice === null || product.sellingPrice === null) {
@@ -100,11 +94,8 @@ function removeLine(index: number) {
 }
 
 function clearCart() {
-  cart.value = []
-  cashInput.value = ''
-  submissionKey.value = ''
+  clearCartState()
   errorMessage.value = ''
-  requestLoad(true)
 }
 
 const total = computed(() => cart.value.reduce((sum, line) => sum + (line.product.sellingPrice ?? 0) * line.quantity, 0))
@@ -147,6 +138,9 @@ async function saveSale() {
       },
     })
     completedSale.value = receipt
+    // The sale is recorded now - clear the shared cart so a later visit to
+    // this page doesn't resurrect an already-sold cart.
+    clearCartState()
   } catch (err: unknown) {
     const message = apiErrorMessage(err, 'Could not save sale')
     errorMessage.value = message
@@ -190,15 +184,19 @@ async function startNewSale() {
   searchInput.value?.focus()
 }
 
-// Navigating away with an unsaved cart silently discarded it before. Warn
-// once there's something to lose; a completed sale is already saved, so it
-// never blocks navigation.
-onBeforeRouteLeave(async () => {
+// The cart is shared state now (useCart), so leaving no longer loses it -
+// but the cashier may still not want to wander off mid-sale, so ask. A
+// completed sale is already saved and never blocks navigation.
+onBeforeRouteLeave(async (to) => {
   if (completedSale.value || cart.value.length === 0) return true
+  // Forced redirects (expired session, mandatory password change) aren't a
+  // navigation the cashier chose - don't ask them to confirm one they can't
+  // decline.
+  if (to.path === '/login' || to.path === '/settings/password') return true
   return confirm({
-    title: 'Leave without saving this sale?',
-    body: 'The cart items are not saved yet. Leaving this screen clears them.',
-    confirmLabel: 'Leave without saving',
+    title: 'Leave this unfinished sale?',
+    body: 'This sale is not recorded yet. The cart will still be here when you come back.',
+    confirmLabel: 'Leave',
     cancelLabel: 'Stay',
     tone: 'warn',
   })
@@ -222,7 +220,7 @@ onBeforeRouteLeave(async () => {
         <AppCard data-testid="sale-summary">
           <p
             class="mb-3 rounded-lg px-3 py-2 text-center text-sm font-semibold"
-            :class="completedSale.voidedAt ? 'bg-neutral-100 text-ink-subtle' : 'bg-brand-50 text-brand-700'"
+            :class="completedSale.voidedAt ? 'bg-neutral-100 text-ink-subtle' : 'bg-success-50 text-success-700'"
           >
             {{ completedSale.voidedAt ? 'Voided. Stock restored.' : 'Sale complete' }}
           </p>
@@ -253,9 +251,9 @@ onBeforeRouteLeave(async () => {
             </div>
           </div>
 
-          <div class="pop-in mt-3 rounded-[var(--radius-control)] bg-brand-50 py-3 text-center">
-            <p class="text-xs uppercase text-brand-700">Change due</p>
-            <p class="text-2xl font-bold tabular-nums text-brand-700" data-testid="summary-change">
+          <div class="pop-in mt-3 rounded-[var(--radius-control)] bg-success-50 py-3 text-center">
+            <p class="text-xs uppercase text-success-700">Change due</p>
+            <p class="text-2xl font-bold tabular-nums text-success-700" data-testid="summary-change">
               {{ formatPeso(completedSale.changeDue ?? 0) }}
             </p>
           </div>
@@ -279,7 +277,7 @@ onBeforeRouteLeave(async () => {
       </template>
 
       <template v-else>
-        <div class="sticky-search -mx-4 border-b border-line bg-surface-sunken px-4 pb-3">
+        <div class="sticky-search -mx-4 border-b border-line bg-surface-sunken px-4 pt-3 pb-3">
           <div class="relative">
           <PhMagnifyingGlass class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-subtle" />
           <input
@@ -390,7 +388,7 @@ onBeforeRouteLeave(async () => {
             />
           </AppField>
 
-          <div v-if="cashInput.trim()" class="mt-3 rounded-[var(--radius-control)] py-3 text-center" :class="hasShortfall ? 'bg-danger-50' : 'bg-brand-50'">
+          <div v-if="cashInput.trim()" class="mt-3 rounded-[var(--radius-control)] py-3 text-center" :class="hasShortfall ? 'bg-danger-50' : 'bg-success-50'">
             <template v-if="!cashValid">
               <p class="text-sm font-medium text-danger-600">Enter a valid amount.</p>
             </template>
@@ -401,8 +399,8 @@ onBeforeRouteLeave(async () => {
               </p>
             </template>
             <template v-else>
-              <p class="text-xs uppercase text-brand-700">Change due</p>
-              <p class="text-xl font-bold tabular-nums text-brand-700" data-testid="change-due">
+              <p class="text-xs uppercase text-success-700">Change due</p>
+              <p class="text-xl font-bold tabular-nums text-success-700" data-testid="change-due">
                 {{ formatPeso(changeDue ?? 0) }}
               </p>
             </template>

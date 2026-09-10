@@ -133,7 +133,7 @@ async function deactivate() {
     <PageHeader :title="product.name" :subtitle="product.variant || undefined" />
 
     <div class="space-y-6 px-4 py-4">
-      <p v-if="message" class="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">{{ message }}</p>
+      <p v-if="message" class="rounded-lg bg-success-50 px-3 py-2 text-sm text-success-700">{{ message }}</p>
 
       <AppCard>
         <h2 class="mb-3 text-sm font-semibold text-ink-muted">Details</h2>

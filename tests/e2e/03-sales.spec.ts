@@ -87,6 +87,7 @@ test('bottom navigation stays tappable after mobile sale products load', async (
   })))
 
   await page.goto('/sales/new')
+  await page.getByTestId('product-search').fill('Scrollable Sale')
   await expect(page.getByTestId('search-result').first()).toBeVisible()
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
   await expect(page.getByTestId('product-search')).toBeInViewport()
@@ -94,6 +95,10 @@ test('bottom navigation stays tappable after mobile sale products load', async (
   const screenshotPath = process.env.SALES_NAV_SCREENSHOT_PATH
   if (screenshotPath) await page.screenshot({ path: screenshotPath, fullPage: true })
 
+  // The bottom nav is hidden while a text field is focused (see
+  // app/layouts/default.vue) so a tap near the keyboard can't land on it by
+  // accident - blur the search field first, same as a cashier tapping away.
+  await page.getByTestId('product-search').evaluate((el: HTMLInputElement) => el.blur())
   await page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Stock' }).tap()
   await expect(page).toHaveURL('/inventory')
 })

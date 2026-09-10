@@ -153,7 +153,7 @@ async function logout() {
             </AppButton>
           </div>
 
-          <p v-if="result" class="mt-2 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700" data-testid="import-result">
+          <p v-if="result" class="mt-2 rounded-lg bg-success-50 px-3 py-2 text-sm text-success-700" data-testid="import-result">
             Created {{ result.created }}, updated {{ result.updated }}, skipped {{ result.skipped }}.
           </p>
         </AppCard>

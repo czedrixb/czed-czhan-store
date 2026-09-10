@@ -124,7 +124,7 @@ function submitEdit(u: StoreUser) {
     <PageHeader title="Users" subtitle="Who can use the store app" />
 
     <div class="space-y-4 px-4 py-4">
-      <p v-if="message" data-testid="users-message" class="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">{{ message }}</p>
+      <p v-if="message" data-testid="users-message" class="rounded-lg bg-success-50 px-3 py-2 text-sm text-success-700">{{ message }}</p>
       <p v-if="error" data-testid="users-error" class="rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger-600">{{ error }}</p>
 
       <section class="space-y-2">
