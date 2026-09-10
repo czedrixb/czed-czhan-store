@@ -53,7 +53,7 @@ const TONE_ICON_CLASS = { danger: 'text-danger-600 bg-danger-50', warn: 'text-wa
       @click="onBackdropClick"
     >
       <div
-        class="sheet-panel safe-bottom absolute inset-x-0 bottom-0 mx-auto w-full max-w-md rounded-t-[var(--radius-card)] bg-surface p-5"
+        class="safe-bottom absolute inset-x-0 bottom-0 mx-auto w-full max-w-md rounded-t-[var(--radius-card)] bg-surface px-5 pt-5 [--safe-pb:1.25rem]"
         style="box-shadow: var(--shadow-sheet)"
         role="alertdialog"
         :aria-labelledby="`confirm-title-${current.id}`"

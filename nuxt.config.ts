@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineNuxtConfig({
@@ -31,6 +32,12 @@ export default defineNuxtConfig({
     experimental: {
       wasm: true,
     },
+    // dir.public: '../public' below resolves against rootDir rather than
+    // srcDir on this Nuxt/Nitro version, so the production build was
+    // silently copying from a nonexistent <rootDir>/../public and shipping
+    // with NO public assets at all - every icon and (now) font 404'd. This
+    // pins the real, unambiguous location.
+    publicAssets: [{ dir: fileURLToPath(new URL('./public', import.meta.url)) }],
   },
 
   pwa: {
@@ -39,8 +46,8 @@ export default defineNuxtConfig({
       name: 'Sari-Sari Store',
       short_name: 'SariSari',
       description: 'Inventory, sales, and profit tracking for a sari-sari store',
-      theme_color: '#16a34a',
-      background_color: '#ffffff',
+      theme_color: '#6d5de0',
+      background_color: '#f6f4fb',
       display: 'standalone',
       start_url: '/',
       icons: [
@@ -51,7 +58,10 @@ export default defineNuxtConfig({
     },
     workbox: {
       navigateFallback: '/',
-      globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+      // woff2 added for the self-hosted Plus Jakarta Sans files so the PWA
+      // keeps its typeface offline instead of falling back to the system
+      // stack once the network is gone.
+      globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
     },
     devOptions: {
       enabled: false,
@@ -61,11 +71,12 @@ export default defineNuxtConfig({
   app: {
     head: {
       viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
-      meta: [{ name: 'theme-color', content: '#16a34a' }],
+      meta: [{ name: 'theme-color', content: '#6d5de0' }],
       link: [
         { rel: 'icon', type: 'image/png', sizes: '16x16', href: '/icons/storefront-16.png' },
         { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/icons/storefront-32.png' },
         { rel: 'apple-touch-icon', sizes: '180x180', href: '/icons/storefront-180.png' },
+        { rel: 'preload', as: 'font', type: 'font/woff2', href: '/fonts/plus-jakarta-sans-latin.woff2', crossorigin: 'anonymous' },
       ],
     },
     pageTransition: { name: 'page', mode: 'out-in' },
