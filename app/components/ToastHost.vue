@@ -10,11 +10,12 @@ const ICON: Record<ToastTone, typeof PhCheckCircle> = {
   info: PhInfo,
 }
 
-// Toasts sit on a deep-ink surface (not a pale brand-tinted panel) so a
-// success message never reads as "just another green card" next to the
-// rest of the UI - the tone comes through in the icon and left rule only.
+// Toasts sit on a deep-ink surface (not a pale brand-tinted panel) so the
+// tone comes through in the icon and left rule only. Success stays on the
+// green success-* family (not brand) so it keeps reading as "good" now that
+// brand is periwinkle rather than green.
 const TONE_ACCENT: Record<ToastTone, string> = {
-  success: 'border-l-brand-500 [&_svg]:text-brand-400',
+  success: 'border-l-success-500 [&_svg]:text-success-500',
   error: 'border-l-danger-500 [&_svg]:text-danger-400',
   info: 'border-l-info-500 [&_svg]:text-neutral-300',
 }
@@ -22,7 +23,7 @@ const TONE_ACCENT: Record<ToastTone, string> = {
 
 <template>
   <div
-    class="safe-bottom pointer-events-none fixed inset-x-0 bottom-20 z-50 mx-auto flex max-w-md flex-col gap-2 px-4"
+    class="safe-bottom pointer-events-none fixed inset-x-0 bottom-28 z-50 mx-auto flex max-w-md flex-col gap-2 px-4"
     aria-label="Notifications"
   >
     <TransitionGroup name="toast">
