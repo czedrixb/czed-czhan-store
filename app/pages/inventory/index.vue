@@ -58,7 +58,7 @@ function status(p: Product) {
   <div>
     <PageHeader title="Inventory">
       <template #actions>
-        <NuxtLink to="/products/new" class="focus-ring absolute right-4 top-4 flex items-center gap-1 text-sm font-semibold text-brand-600">
+        <NuxtLink to="/products/new" class="focus-ring flex shrink-0 items-center gap-1 text-sm font-semibold text-brand-600">
           <PhPlus class="h-4 w-4" weight="bold" />
           Add Product
         </NuxtLink>
@@ -66,7 +66,7 @@ function status(p: Product) {
     </PageHeader>
 
     <div class="space-y-3 px-4 py-4">
-      <div class="sticky-search -mx-4 space-y-3 border-b border-line bg-surface-sunken px-4 pb-3">
+      <div class="sticky-search -mx-4 space-y-3 border-b border-line bg-surface-sunken px-4 pt-3 pb-3">
         <div class="relative">
           <PhMagnifyingGlass class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-subtle" />
           <input

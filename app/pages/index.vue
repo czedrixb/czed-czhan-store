@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { PhChartLineUp, PhCoins, PhPackage, PhReceipt, PhWallet } from '@phosphor-icons/vue'
 import type { DashboardSummary } from '~/types'
 
 const { data, refresh, pending, error } = useLazyFetch<DashboardSummary>('/api/dashboard/today')
@@ -6,7 +7,7 @@ const { data, refresh, pending, error } = useLazyFetch<DashboardSummary>('/api/d
 
 <template>
   <div>
-    <PageHeader title="Today's Summary" :subtitle="data ? formatDateLabel(data.date) : undefined" />
+    <HomeHeader title="Today's Summary" :subtitle="data ? formatDateLabel(data.date) : undefined" />
 
     <div class="space-y-6 px-4 py-4">
       <AppSkeleton v-if="pending && !data" variant="stat-grid" />
@@ -18,12 +19,12 @@ const { data, refresh, pending, error } = useLazyFetch<DashboardSummary>('/api/d
 
       <template v-else-if="data">
         <div class="grid grid-cols-2 gap-3">
-          <StatTile label="Sales" :value="formatPeso(data.revenue)" tone="brand" />
-          <StatTile label="Cost" :value="formatPeso(data.cost)" />
-          <StatTile label="Profit" :value="formatPeso(data.profit)" tone="brand" />
-          <StatTile label="Items Sold" :value="String(data.itemsSold)" />
+          <StatTile label="Sales" :value="formatPeso(data.revenue)" tone="brand" :icon="PhCoins" />
+          <StatTile label="Cost" :value="formatPeso(data.cost)" :icon="PhWallet" />
+          <StatTile label="Profit" :value="formatPeso(data.profit)" tone="brand" :icon="PhChartLineUp" />
+          <StatTile label="Items Sold" :value="String(data.itemsSold)" :icon="PhPackage" />
         </div>
-        <StatTile label="Transactions" :value="String(data.transactions)" />
+        <StatTile label="Transactions" :value="String(data.transactions)" :icon="PhReceipt" />
 
         <section>
           <h2 class="mb-2 text-sm font-semibold text-ink-muted">Quick Actions</h2>

@@ -14,7 +14,7 @@ withDefaults(
 <template>
   <div aria-hidden="true" role="presentation">
     <div v-if="variant === 'stat-grid'" class="grid grid-cols-2 gap-3">
-      <div v-for="i in 4" :key="i" class="skeleton h-20 rounded-[var(--radius-card)]" />
+      <div v-for="i in 4" :key="i" class="skeleton h-28 rounded-[var(--radius-card)]" />
     </div>
 
     <div v-else-if="variant === 'list'" class="overflow-hidden rounded-[var(--radius-card)] border border-line">

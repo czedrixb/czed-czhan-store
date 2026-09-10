@@ -94,7 +94,7 @@ const countedItems = computed(() => count.value?.items.filter((i) => i.actualQua
               </td>
               <td
                 class="px-3 py-2 text-right tabular-nums font-medium"
-                :class="{ 'text-danger-600': (item.difference ?? 0) < 0, 'text-brand-600': (item.difference ?? 0) > 0 }"
+                :class="{ 'text-danger-600': (item.difference ?? 0) < 0, 'text-success-600': (item.difference ?? 0) > 0 }"
               >
                 {{ item.difference ?? 'Not counted' }}
               </td>

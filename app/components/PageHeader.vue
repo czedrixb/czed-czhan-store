@@ -6,9 +6,13 @@ defineProps<{
 </script>
 
 <template>
-  <header class="safe-top sticky top-0 z-30 border-b border-line bg-surface/95 px-4 py-4 backdrop-blur">
-    <h1 class="text-lg font-bold text-ink">{{ title }}</h1>
-    <p v-if="subtitle" class="text-sm text-ink-subtle">{{ subtitle }}</p>
-    <slot name="actions" />
+  <header class="safe-top sticky top-0 z-30 rounded-b-[var(--radius-card)] border-b border-line/60 bg-surface px-4 pb-4 [--safe-pt:1.25rem]">
+    <div class="flex items-center justify-between gap-3">
+      <div class="min-w-0">
+        <h1 class="text-lg font-bold text-ink">{{ title }}</h1>
+        <p v-if="subtitle" class="text-sm text-ink-subtle">{{ subtitle }}</p>
+      </div>
+      <slot name="actions" />
+    </div>
   </header>
 </template>
