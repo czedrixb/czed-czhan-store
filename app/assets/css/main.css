@@ -132,6 +132,16 @@ body {
   padding-top: env(safe-area-inset-top);
 }
 
+.sticky-search {
+  position: sticky;
+  top: calc(3.8125rem + env(safe-area-inset-top));
+  z-index: 20;
+  /* iOS Safari can retain an oversized hit-test layer for sticky elements
+     using backdrop-filter. Keep this interaction-critical surface opaque. */
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
 /* Tactile press feedback for buttons and tappable rows. Feedback-motivated:
    confirms a tap registered before the network response arrives. */
 .press {

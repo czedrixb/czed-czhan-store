@@ -37,6 +37,17 @@ if (build.status !== 0) {
   process.exit(build.status ?? 1)
 }
 
+const migration = spawnSync(process.execPath, ['--import', 'tsx', path.resolve(process.cwd(), 'scripts/migrate.ts')], {
+  cwd: process.cwd(),
+  env: { ...env, NODE_OPTIONS: process.env.NODE_OPTIONS || '' },
+  stdio: 'inherit',
+})
+
+if (migration.status !== 0) {
+  rmSync(dataDir, { recursive: true, force: true })
+  process.exit(migration.status ?? 1)
+}
+
 const serverEntry = path.resolve(process.cwd(), '.output/server/index.mjs')
 const child = spawn(process.execPath, [serverEntry], {
   cwd: process.cwd(),

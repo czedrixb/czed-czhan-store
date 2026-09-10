@@ -66,20 +66,22 @@ function status(p: Product) {
     </PageHeader>
 
     <div class="space-y-3 px-4 py-4">
-      <div class="relative">
-        <PhMagnifyingGlass class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-subtle" />
-        <input
-          v-model="search"
-          type="search"
-          placeholder="Search inventory..."
-          class="field-input field-input--with-leading-icon"
-        />
-      </div>
+      <div class="sticky-search -mx-4 space-y-3 border-b border-line bg-surface-sunken px-4 pb-3">
+        <div class="relative">
+          <PhMagnifyingGlass class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-subtle" />
+          <input
+            v-model="search"
+            type="search"
+            placeholder="Search inventory..."
+            class="field-input field-input--with-leading-icon"
+          />
+        </div>
 
-      <label class="flex items-center gap-2 text-sm text-ink-muted">
-        <input v-model="lowStockOnly" type="checkbox" class="h-4 w-4 rounded border-line-strong text-brand-600 focus-ring" />
-        Low stock only
-      </label>
+        <label class="flex items-center gap-2 text-sm text-ink-muted">
+          <input v-model="lowStockOnly" type="checkbox" class="h-4 w-4 rounded border-line-strong text-brand-600 focus-ring" />
+          Low stock only
+        </label>
+      </div>
 
       <AppSkeleton v-if="loading" variant="list" />
       <div v-else-if="error" class="space-y-2 rounded-[var(--radius-card)] border border-danger-200 bg-danger-50 p-4 text-sm text-danger-600">
@@ -90,7 +92,11 @@ function status(p: Product) {
 
       <ul v-else class="divide-y divide-line overflow-hidden rounded-[var(--radius-card)] border border-line bg-surface">
         <li v-for="(p, i) in products" :key="p.id" class="list-enter-item" :style="{ '--i': i }">
-          <NuxtLink :to="`/products/${p.id}`" class="focus-ring flex items-center justify-between px-4 py-3 active:bg-neutral-50">
+          <NuxtLink
+            :to="`/products/${p.id}`"
+            class="focus-ring relative z-10 flex touch-manipulation items-center justify-between px-4 py-3 active:bg-neutral-50"
+            @touchend.prevent="navigateTo(`/products/${p.id}`)"
+          >
             <div>
               <p class="font-medium text-ink">{{ p.name }}<span v-if="p.variant" class="text-ink-subtle"> · {{ p.variant }}</span></p>
               <p v-if="p.costPrice === null || p.sellingPrice === null" class="text-xs text-warn-600">Needs pricing</p>

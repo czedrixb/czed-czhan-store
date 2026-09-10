@@ -21,7 +21,20 @@ test('the correct account credentials admit the user to the dashboard', async ({
   await page.goto('/login')
   await page.getByLabel('Username').fill('admin')
   await page.getByLabel('Password').fill('1234test')
+  if (process.env.AUTH_SCREENSHOT_DIR) {
+    await page.screenshot({ path: `${process.env.AUTH_SCREENSHOT_DIR}/before-http-login.png`, fullPage: true })
+  }
   await page.getByRole('button', { name: 'Sign In' }).click()
   await expect(page).toHaveURL('/')
   await expect(page.getByText("Today's Summary")).toBeVisible()
+
+  if (process.env.AUTH_SCREENSHOT_DIR) {
+    await page.screenshot({ path: `${process.env.AUTH_SCREENSHOT_DIR}/after-http-login.png`, fullPage: true })
+  }
+
+  const sessionCookie = (await page.context().cookies()).find(({ name }) => name === 'sari_session')
+  expect(sessionCookie).toMatchObject({ httpOnly: true, secure: false, sameSite: 'Lax' })
+
+  const dashboardResponse = await page.request.get('/api/dashboard/today')
+  expect(dashboardResponse.status()).toBe(200)
 })
