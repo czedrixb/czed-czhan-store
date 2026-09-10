@@ -26,6 +26,10 @@ test('standalone mobile product rows and bottom navigation remain tappable', asy
   await page.getByTestId('search-result').tap()
   await expect(page.getByTestId('cart-line')).toContainText(product.name)
 
+  // The bottom nav is hidden while a text field is focused (see
+  // app/layouts/default.vue) and tapping a search result doesn't blur the
+  // search box - blur it first, same as a cashier tapping away.
+  await page.getByTestId('product-search').evaluate((el: HTMLInputElement) => el.blur())
   await page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Stock' }).tap()
   await expect(page.getByTestId('confirm-dialog')).toBeVisible()
   await page.getByTestId('confirm-accept').tap()

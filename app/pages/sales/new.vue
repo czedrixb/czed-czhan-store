@@ -187,19 +187,33 @@ async function startNewSale() {
 // The cart is shared state now (useCart), so leaving no longer loses it -
 // but the cashier may still not want to wander off mid-sale, so ask. A
 // completed sale is already saved and never blocks navigation.
+//
+// Vue Router can invoke this guard a second time for the same departure -
+// once the cart stopped being cleared on leave (previously `cart.value = []`
+// made the second call take the `cart.value.length === 0` fast path above
+// and resolve silently), a duplicate call instead re-opened the confirm
+// dialog after the cashier had already answered it, silently eating the tap
+// on whatever they tried to do next. Cache the answer per mount: once they
+// say "Leave", any further call for this instance leaves without asking
+// again; choosing "Stay" clears the cache so a later, real departure still
+// prompts.
+let leaveDecision: boolean | null = null
 onBeforeRouteLeave(async (to) => {
   if (completedSale.value || cart.value.length === 0) return true
   // Forced redirects (expired session, mandatory password change) aren't a
   // navigation the cashier chose - don't ask them to confirm one they can't
   // decline.
   if (to.path === '/login' || to.path === '/settings/password') return true
-  return confirm({
+  if (leaveDecision !== null) return leaveDecision
+  const accepted = await confirm({
     title: 'Leave this unfinished sale?',
     body: 'This sale is not recorded yet. The cart will still be here when you come back.',
     confirmLabel: 'Leave',
     cancelLabel: 'Stay',
     tone: 'warn',
   })
+  leaveDecision = accepted || null
+  return accepted
 })
 </script>
 

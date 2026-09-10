@@ -27,14 +27,25 @@ watch(visible, async (isVisible) => {
   cancelRef.value?.focus()
 })
 
+// v-if destroys the <dialog> element the instant `visible` goes false, but
+// that only unmounts it - it never calls the native close() first. Chromium
+// then leaves the modal's top-layer/backdrop entry behind, which silently
+// eats pointer events on whatever dialog opens next. Always close() the
+// element ourselves before resolving so nothing gets orphaned in the top
+// layer.
+function closeAndResolve(accepted: boolean) {
+  dialogRef.value?.close()
+  resolve(accepted)
+}
+
 function onCancel(event: Event) {
   // Fires for Esc-to-close on <dialog>. Treat it the same as tapping Cancel.
   event.preventDefault()
-  resolve(false)
+  closeAndResolve(false)
 }
 
 function onBackdropClick(event: MouseEvent) {
-  if (event.target === dialogRef.value) resolve(false)
+  if (event.target === dialogRef.value) closeAndResolve(false)
 }
 
 const TONE_ICON = { danger: PhWarningOctagon, warn: PhWarning }
@@ -75,7 +86,7 @@ const TONE_ICON_CLASS = { danger: 'text-danger-600 bg-danger-50', warn: 'text-wa
             type="button"
             data-testid="confirm-cancel"
             class="press focus-ring min-h-[48px] w-full rounded-[var(--radius-control)] bg-brand-600 text-base font-semibold text-white active:bg-brand-700"
-            @click="resolve(false)"
+            @click="closeAndResolve(false)"
           >
             {{ current.cancelLabel }}
           </button>
@@ -84,7 +95,7 @@ const TONE_ICON_CLASS = { danger: 'text-danger-600 bg-danger-50', warn: 'text-wa
             data-testid="confirm-accept"
             class="press focus-ring min-h-[48px] w-full rounded-[var(--radius-control)] border text-base font-semibold active:bg-danger-50"
             :class="current.tone === 'danger' ? 'border-danger-600 text-danger-600' : 'border-warn-600 text-warn-600'"
-            @click="resolve(true)"
+            @click="closeAndResolve(true)"
           >
             {{ current.confirmLabel }}
           </button>
