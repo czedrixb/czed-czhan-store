@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { PhMagnifyingGlass, PhPackage, PhPlus } from '@phosphor-icons/vue'
+import { PhMagnifyingGlass, PhPackage, PhPlus, PhX } from '@phosphor-icons/vue'
 import type { Product } from '~/types'
 
 const toast = useToast()
 
 const search = ref('')
+const searchInput = ref<HTMLInputElement | null>(null)
 const lowStockOnly = ref(false)
 const products = ref<Product[]>([])
 const loading = ref(false)
@@ -52,13 +53,23 @@ onBeforeUnmount(() => {
 function status(p: Product) {
   return p.stock <= p.lowStockThreshold ? 'Low' : 'Normal'
 }
+
+function clearSearch() {
+  search.value = ''
+  searchInput.value?.focus()
+}
+
 </script>
 
 <template>
   <div>
     <PageHeader title="Inventory">
       <template #actions>
-        <NuxtLink to="/products/new" class="focus-ring flex shrink-0 items-center gap-1 text-sm font-semibold text-brand-600">
+        <NuxtLink
+          to="/products/new"
+          class="focus-ring relative z-10 flex min-h-11 shrink-0 touch-manipulation items-center gap-1 rounded-[var(--radius-control)] px-2 text-sm font-semibold text-brand-600 active:bg-brand-50"
+          @touchend.prevent="navigateTo('/products/new')"
+        >
           <PhPlus class="h-4 w-4" weight="bold" />
           Add Product
         </NuxtLink>
@@ -70,11 +81,21 @@ function status(p: Product) {
         <div class="relative">
           <PhMagnifyingGlass class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-subtle" />
           <input
+            ref="searchInput"
             v-model="search"
             type="search"
             placeholder="Search inventory..."
-            class="field-input field-input--with-leading-icon"
+            class="field-input field-input--with-leading-icon pr-12"
           />
+          <button
+            v-show="search.length"
+            type="button"
+            class="focus-ring absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 touch-manipulation items-center justify-center rounded-full text-ink-muted active:bg-neutral-100"
+            aria-label="Clear inventory search"
+            @click="clearSearch"
+          >
+            <PhX class="h-5 w-5" weight="bold" aria-hidden="true" />
+          </button>
         </div>
 
         <label class="flex items-center gap-2 text-sm text-ink-muted">

@@ -11,6 +11,7 @@ test-results/
 playwright-report/
 blob-report/
 .pglite-test/
+.playwright-browsers/
 tests/e2e/.auth/
 docs/
 tests/
