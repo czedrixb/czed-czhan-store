@@ -177,6 +177,9 @@ body {
 .field-input::placeholder {
   color: var(--color-neutral-400);
 }
+.field-input[type='search']::-webkit-search-cancel-button {
+  display: none;
+}
 .field-input--with-leading-icon {
   /* Keep the placeholder clear of a 20px icon positioned 16px from the
      control edge, with a 16px gap for legibility. This lives after Tailwind's
