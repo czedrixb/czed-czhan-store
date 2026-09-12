@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Incorrect username or password' })
   }
 
-  const token = createSessionToken(config.sessionSecret, user.id)
+  const token = createSessionToken(config.sessionSecret, user.id, user.sessionEpoch)
   const isHttps = getRequestURL(event).protocol === 'https:'
   setCookie(event, SESSION_COOKIE_NAME, token, {
     httpOnly: true,
@@ -26,13 +26,6 @@ export default defineEventHandler(async (event) => {
     secure: isHttps,
     path: '/',
     maxAge: 30 * 24 * 60 * 60,
-  })
-
-  await recordAudit(db, {
-    userId: user.id,
-    action: 'LOGIN',
-    entityType: 'SESSION',
-    description: `${user.displayName} signed in`,
   })
 
   return {

@@ -22,6 +22,12 @@ export const users = pgTable(
     isActive: boolean('is_active').notNull().default(true),
     role: text('role', { enum: userRoles }).notNull().default('MEMBER'),
     mustChangePassword: boolean('must_change_password').notNull().default(false),
+    // Baked into the signed session token (server/utils/auth.ts) and checked
+    // on every request (server/utils/current-user.ts). Bumping this is the
+    // only way to invalidate a user's existing cookies - there is no
+    // server-side session store. Bumped on an admin password reset and on a
+    // self-service password change.
+    sessionEpoch: integer('session_epoch').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

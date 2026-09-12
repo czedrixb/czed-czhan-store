@@ -12,7 +12,10 @@ interface StoredCart {
   submissionKey: string
 }
 
-const STORAGE_KEY = 'sari-sari:cart'
+const STORAGE_KEY = 'tindahan:cart'
+// Pre-rebrand key. Read once as a fallback so an in-progress sale started
+// before the rename still survives a reload; never written to again.
+const LEGACY_STORAGE_KEY = 'sari-sari:cart'
 
 // useState makes the cart a true cross-page singleton (same pattern as
 // useToast/useSession) - it used to be a plain ref() owned by
@@ -62,12 +65,18 @@ export function useCart() {
       if (hydrated) return
       hydrated = true
       try {
-        const raw = sessionStorage.getItem(STORAGE_KEY)
+        let raw = sessionStorage.getItem(STORAGE_KEY)
+        const isLegacy = raw === null
+        if (isLegacy) raw = sessionStorage.getItem(LEGACY_STORAGE_KEY)
         if (!raw) return
         const parsed = JSON.parse(raw) as Partial<StoredCart>
         lines.value = Array.isArray(parsed.lines) ? parsed.lines : []
         cash.value = typeof parsed.cash === 'string' ? parsed.cash : ''
         submissionKey.value = typeof parsed.submissionKey === 'string' ? parsed.submissionKey : ''
+        if (isLegacy) {
+          sessionStorage.removeItem(LEGACY_STORAGE_KEY)
+          persist(lines.value, cash.value, submissionKey.value)
+        }
       } catch {
         // Corrupt or inaccessible storage - start with an empty cart.
       }

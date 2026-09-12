@@ -19,8 +19,20 @@ const form = reactive({ displayName: '', username: '', password: '', role: 'MEMB
 const openId = ref<number | null>(null)
 const resetOpenId = ref<number | null>(null)
 const resetPassword = ref('')
+const resetConfirmPassword = ref('')
 const editOpenId = ref<number | null>(null)
 const editForm = reactive({ displayName: '', username: '' })
+
+const resetLengthError = computed(() => passwordLengthError(resetPassword.value))
+const resetMismatchError = computed(() =>
+  resetPassword.value ? passwordMismatchError(resetPassword.value, resetConfirmPassword.value) : null,
+)
+const resetCanSubmit = computed(
+  () =>
+    resetPassword.value.length >= PASSWORD_MIN_LENGTH &&
+    !resetLengthError.value &&
+    resetPassword.value === resetConfirmPassword.value,
+)
 
 const myId = computed(() => session.value?.user?.id)
 const activeAdminCount = computed(() => users.value?.filter((u) => u.role === 'ADMIN' && u.isActive).length ?? 0)
@@ -90,7 +102,17 @@ async function setActive(u: StoreUser, isActive: boolean) {
   await run(() => $fetch(`/api/users/${u.id}`, { method: 'PATCH', body: { isActive } }), 'Account deactivated.')
 }
 
+function toggleReset(u: StoreUser) {
+  resetOpenId.value = resetOpenId.value === u.id ? null : u.id
+  // Never let a typed password linger past a close or a switch to another
+  // user's row.
+  resetPassword.value = ''
+  resetConfirmPassword.value = ''
+}
+
 async function submitReset(u: StoreUser) {
+  if (!resetCanSubmit.value) return
+
   const ok = await confirm({
     title: `Reset ${u.displayName}'s access?`,
     body: `${u.displayName} is signed out and must set a new password on their next sign-in.`,
@@ -100,10 +122,16 @@ async function submitReset(u: StoreUser) {
   if (!ok) return
 
   await run(async () => {
-    await $fetch(`/api/users/${u.id}/reset-password`, { method: 'POST', body: { password: resetPassword.value } })
-    resetPassword.value = ''
+    await $fetch(`/api/users/${u.id}/reset-password`, {
+      method: 'POST',
+      body: { password: resetPassword.value, confirmPassword: resetConfirmPassword.value },
+    })
     resetOpenId.value = null
   }, 'Access reset. Share the new temporary password with them.')
+  // Cleared on both success and failure - a failed attempt should not leave
+  // the temporary password sitting in the form.
+  resetPassword.value = ''
+  resetConfirmPassword.value = ''
 }
 
 function toggleEdit(u: StoreUser) {
@@ -155,7 +183,7 @@ function submitEdit(u: StoreUser) {
             block
             size="sm"
             :loading="busy"
-            :disabled="busy || !form.displayName || !form.username || form.password.length < 6"
+            :disabled="busy || !form.displayName || !form.username || form.password.length < PASSWORD_MIN_LENGTH"
             data-testid="create-user"
             @click="createUser"
           >
@@ -229,15 +257,33 @@ function submitEdit(u: StoreUser) {
                 size="sm"
                 data-testid="user-reset-toggle"
                 :disabled="busy || u.id === myId"
-                @click="resetOpenId = resetOpenId === u.id ? null : u.id"
+                @click="toggleReset(u)"
               >
                 Reset Access
               </AppButton>
               <div v-if="resetOpenId === u.id" class="space-y-2">
-                <AppField label="New temporary password" :for="`reset-password-${u.id}`">
-                  <input :id="`reset-password-${u.id}`" v-model="resetPassword" data-testid="user-reset-password-input" type="password" autocomplete="new-password" class="field-input text-sm" />
+                <AppField
+                  label="New temporary password"
+                  :for="`reset-password-${u.id}`"
+                  hint="At least 6 characters."
+                  :error="resetLengthError ?? undefined"
+                >
+                  <PasswordField
+                    :id="`reset-password-${u.id}`"
+                    v-model="resetPassword"
+                    testid="user-reset-password-input"
+                    autocomplete="new-password"
+                  />
                 </AppField>
-                <AppButton block size="sm" :loading="busy" :disabled="busy || resetPassword.length < 6" data-testid="user-reset-submit" @click="submitReset(u)">
+                <AppField label="Confirm temporary password" :for="`reset-confirm-password-${u.id}`" :error="resetMismatchError ?? undefined">
+                  <PasswordField
+                    :id="`reset-confirm-password-${u.id}`"
+                    v-model="resetConfirmPassword"
+                    testid="user-reset-confirm-password-input"
+                    autocomplete="new-password"
+                  />
+                </AppField>
+                <AppButton block size="sm" :loading="busy" :disabled="busy || !resetCanSubmit" data-testid="user-reset-submit" @click="submitReset(u)">
                   Reset Password
                 </AppButton>
               </div>

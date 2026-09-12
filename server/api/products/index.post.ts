@@ -13,20 +13,11 @@ const createProductSchema = z.object({
 export default defineEventHandler(async (event) => {
   const data = await readValidated(event, createProductSchema)
   const db = useDb()
-  const user = requireUser(event)
+  requireUser(event)
 
   try {
-    return await db.transaction(async (tx) => {
-      const [created] = await tx.insert(products).values(data).returning()
-      await recordAudit(tx, {
-        userId: user.id,
-        action: 'CREATE',
-        entityType: 'PRODUCT',
-        entityId: created.id,
-        description: `Created product ${created.name}${created.variant ? ` · ${created.variant}` : ''}`,
-      })
-      return created
-    })
+    const [created] = await db.insert(products).values(data).returning()
+    return created
   } catch (err) {
     if (isUniqueViolation(err)) {
       throw createError({ statusCode: 409, statusMessage: 'A product with this name and variant already exists' })

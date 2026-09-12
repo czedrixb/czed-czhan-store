@@ -1,11 +1,17 @@
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { users } from '../../db/schema'
 
-const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1).max(200),
-  newPassword: z.string().min(6).max(200),
-})
+const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1).max(PASSWORD_MAX_LENGTH),
+    newPassword: z.string().min(PASSWORD_MIN_LENGTH).max(PASSWORD_MAX_LENGTH),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  })
 
 export default defineEventHandler(async (event) => {
   const data = await readValidated(event, changePasswordSchema)
@@ -20,19 +26,29 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Choose a password different from your current one' })
   }
 
-  await db.transaction(async (tx) => {
-    await tx
-      .update(users)
-      .set({ passwordHash: hashPassword(data.newPassword), mustChangePassword: false, updatedAt: new Date() })
-      .where(eq(users.id, actor.id))
-
-    await recordAudit(tx, {
-      userId: actor.id,
-      action: 'PASSWORD_CHANGE',
-      entityType: 'USER',
-      entityId: actor.id,
-      description: `${actor.displayName} changed their password`,
+  const [updated] = await db
+    .update(users)
+    .set({
+      passwordHash: hashPassword(data.newPassword),
+      mustChangePassword: false,
+      sessionEpoch: sql`${users.sessionEpoch} + 1`,
+      updatedAt: new Date(),
     })
+    .where(eq(users.id, actor.id))
+    .returning({ sessionEpoch: users.sessionEpoch })
+
+  // Changing your own password must not sign you out mid-flow: the epoch
+  // bump above kills the cookie this very request arrived with, so
+  // immediately re-issue one carrying the new epoch.
+  const config = useRuntimeConfig()
+  const token = createSessionToken(config.sessionSecret, actor.id, updated.sessionEpoch)
+  const isHttps = getRequestURL(event).protocol === 'https:'
+  setCookie(event, SESSION_COOKIE_NAME, token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isHttps,
+    path: '/',
+    maxAge: 30 * 24 * 60 * 60,
   })
 
   return { ok: true }

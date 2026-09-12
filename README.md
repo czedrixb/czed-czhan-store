@@ -1,4 +1,4 @@
-# Sari-Sari Store Inventory & Sales App
+# Tindahan
 
 A mobile-first PWA for a small sari-sari store: record sales in a few taps,
 automatically track profit and stock, run a weekly physical inventory count,

@@ -25,6 +25,18 @@
   --color-accent-600: #c74940; /* 4.7:1 on white */
   --color-accent-700: #a63a32;
 
+  /* Teal/mint tertiary. Reserved for positive totals (profit) and the
+     "View inventory" quick action, so a third hue is available alongside
+     brand + coral instead of reusing --color-success-* for a non-status role. */
+  --color-teal-50: #eefaf6;
+  --color-teal-100: #d2f1e7;
+  --color-teal-200: #a6e3d1;
+  --color-teal-300: #71cdb7;
+  --color-teal-400: #3fb29a;
+  --color-teal-500: #1f9781;
+  --color-teal-600: #0d8a76; /* 4.6:1 on white */
+  --color-teal-700: #0f766e; /* 5.9:1 on white */
+
   /* One neutral temperature (violet-tinted, matching the brand) used for
      every surface, border, and ink in the app - replaces the mix of a
      green-tinted body background against cool Tailwind gray-* utilities. */
@@ -68,6 +80,7 @@
 
   --color-warn-50: #fffbeb;
   --color-warn-100: #fef3c7;
+  --color-warn-200: #fde68a;
   --color-warn-500: #f59e0b;
   --color-warn-600: #d97706;
   --color-warn-700: #b45309;
@@ -77,6 +90,11 @@
   --color-info-500: #64748b;
   --color-info-600: #475569;
   --color-info-700: #334155;
+
+  /* Warm ivory canvas. Locked to nuxt.config.ts PWA background_color - do
+     not change without updating both. */
+  --color-canvas: #faf8f3;
+  --color-canvas-tint: #f5f2fb;
 
   /* Shape Consistency Lock: one radius scale, used everywhere. */
   --radius-control: 14px;
@@ -96,7 +114,7 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --dur-fast: 120ms;
   --dur-base: 180ms;
-  --dur-slow: 280ms;
+  --dur-slow: 240ms;
 
   /* Typeface. Self-hosted (see @font-face below) so the PWA keeps its type
      offline; falls back to the system stack while the font loads. */
@@ -146,8 +164,8 @@ body,
 
 body {
   font-family: var(--font-sans);
-  background-color: var(--color-surface-sunken);
-  background-image: linear-gradient(180deg, #f3f1fb 0%, #f8f6f3 100%);
+  background-color: var(--color-canvas);
+  background-image: linear-gradient(180deg, var(--color-canvas-tint) 0%, var(--color-canvas) 100%);
   background-attachment: fixed;
   color: var(--color-ink);
   -webkit-tap-highlight-color: transparent;
@@ -261,6 +279,34 @@ body {
 }
 .pop-in {
   animation: pop-in var(--dur-slow) var(--ease-out) both;
+}
+
+/* Splash: gentle mark entrance on mount, short fade-out of the whole overlay
+   once startup is ready (dismiss() flips v-if false, driving this Transition). */
+@keyframes splash-mark-enter {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+.splash-mark {
+  animation: splash-mark-enter var(--dur-slow) var(--ease-out) both;
+}
+.splash-leave-active {
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+.splash-leave-to {
+  opacity: 0;
+}
+
+/* Confirm-dialog sheet entrance. A plain CSS animation on the sheet element
+   itself (not a Vue <Transition>) - the dialog's close()-before-unmount fix
+   above already owns v-if/native-dialog lifecycle timing, and wrapping it in
+   a Transition would race that. Replays each time v-if recreates the sheet. */
+@keyframes dialog-sheet-enter {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.dialog-sheet-enter {
+  animation: dialog-sheet-enter var(--dur-base) var(--ease-out) both;
 }
 
 /* Toast slide-up + fade. */

@@ -4,7 +4,9 @@ test.use({ storageState: { cookies: [], origins: [] } })
 
 test('unauthenticated visitors are redirected to the account sign-in screen', async ({ page }) => {
   await page.goto('/')
-  await expect(page).toHaveURL(/\/login$/)
+  // The intended destination round-trips through ?redirect= so sign-in can
+  // send the user back where they meant to go.
+  await expect(page).toHaveURL(/\/login\?redirect=%2F$|\/login\?redirect=\/$/)
   await expect(page.getByText('Sign in to your account')).toBeVisible()
 })
 

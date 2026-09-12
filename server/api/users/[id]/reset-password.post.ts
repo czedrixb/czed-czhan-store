@@ -1,10 +1,16 @@
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { users } from '../../../db/schema'
 
-const resetSchema = z.object({
-  password: z.string().min(6).max(200),
-})
+const resetSchema = z
+  .object({
+    password: z.string().min(PASSWORD_MIN_LENGTH).max(PASSWORD_MAX_LENGTH),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  })
 
 export default defineEventHandler(async (event) => {
   const id = parseIdParam(event)
@@ -17,23 +23,21 @@ export default defineEventHandler(async (event) => {
 
   const db = useDb()
 
-  return await db.transaction(async (tx) => {
-    const [updated] = await tx
-      .update(users)
-      .set({ passwordHash: hashPassword(data.password), mustChangePassword: true, updatedAt: new Date() })
-      .where(eq(users.id, id))
-      .returning({ id: users.id, username: users.username, displayName: users.displayName })
-
-    if (!updated) throw createError({ statusCode: 404, statusMessage: 'Account not found' })
-
-    await recordAudit(tx, {
-      userId: actor.id,
-      action: 'PASSWORD_RESET',
-      entityType: 'USER',
-      entityId: updated.id,
-      description: `Reset access for ${updated.displayName} (@${updated.username})`,
+  // Bumping session_epoch invalidates every token minted before this write -
+  // the target's existing cookie stops verifying on their very next request,
+  // regardless of how much of its 30-day TTL was left.
+  const [updated] = await db
+    .update(users)
+    .set({
+      passwordHash: hashPassword(data.password),
+      mustChangePassword: true,
+      sessionEpoch: sql`${users.sessionEpoch} + 1`,
+      updatedAt: new Date(),
     })
+    .where(eq(users.id, id))
+    .returning({ id: users.id, username: users.username, displayName: users.displayName })
 
-    return { ok: true }
-  })
+  if (!updated) throw createError({ statusCode: 404, statusMessage: 'Account not found' })
+
+  return { ok: true }
 })

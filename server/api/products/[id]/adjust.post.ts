@@ -15,18 +15,10 @@ export default defineEventHandler(async (event) => {
   const productId = parseIdParam(event)
   const { type, delta, reason } = await readValidated(event, adjustSchema)
   const db = useDb()
-  const user = requireUser(event)
+  requireUser(event)
 
   const result = await db.transaction(async (tx) => {
-    const stock = await applyStockChange(tx, { productId, delta, type, reason })
-    await recordAudit(tx, {
-      userId: user.id,
-      action: type,
-      entityType: 'PRODUCT',
-      entityId: productId,
-      description: `${type.replace('_', ' ')} ${delta > 0 ? '+' : ''}${delta}: ${reason} (stock ${stock.previousStock} → ${stock.newStock})`,
-    })
-    return stock
+    return applyStockChange(tx, { productId, delta, type, reason })
   })
 
   return result

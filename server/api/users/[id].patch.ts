@@ -20,7 +20,7 @@ const updateUserSchema = z
 export default defineEventHandler(async (event) => {
   const id = parseIdParam(event)
   const data = await readValidated(event, updateUserSchema)
-  const actor = requireAdmin(event)
+  requireAdmin(event)
   const db = useDb()
 
   try {
@@ -51,41 +51,6 @@ export default defineEventHandler(async (event) => {
           mustChangePassword: users.mustChangePassword,
           createdAt: users.createdAt,
         })
-
-      const profileChanges: string[] = []
-      if (data.displayName && data.displayName !== before.displayName) profileChanges.push(`name to ${updated.displayName}`)
-      if (data.username && updated.username !== before.username) profileChanges.push(`username to @${updated.username}`)
-      if (profileChanges.length > 0) {
-        await recordAudit(tx, {
-          userId: actor.id,
-          action: 'UPDATE',
-          entityType: 'USER',
-          entityId: updated.id,
-          description: `Updated ${profileChanges.join(' and ')} for ${before.displayName} (@${before.username})`,
-        })
-      }
-
-      if (data.role && data.role !== before.role) {
-        await recordAudit(tx, {
-          userId: actor.id,
-          action: 'ROLE_CHANGE',
-          entityType: 'USER',
-          entityId: updated.id,
-          description: `Changed ${updated.displayName} (@${updated.username}) from ${before.role} to ${updated.role}`,
-        })
-      }
-
-      if (typeof data.isActive === 'boolean' && data.isActive !== before.isActive) {
-        await recordAudit(tx, {
-          userId: actor.id,
-          action: data.isActive ? 'REACTIVATE' : 'DEACTIVATE',
-          entityType: 'USER',
-          entityId: updated.id,
-          description: data.isActive
-            ? `Reactivated account for ${updated.displayName} (@${updated.username})`
-            : `Deactivated account for ${updated.displayName} (@${updated.username})`,
-        })
-      }
 
       return updated
     })

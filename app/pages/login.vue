@@ -1,11 +1,22 @@
 <script setup lang="ts">
 import type { SessionResponse } from '~/types'
 
+useHead({ title: 'Sign In' })
+
 const username = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
 const { set } = useSession()
+const route = useRoute()
+
+// Preserve the page the user was headed to before auth.global.ts bounced them
+// here, so signing in lands them back where they intended instead of always
+// falling through to the role default.
+const redirectTarget = computed(() => {
+  const target = route.query.redirect
+  return typeof target === 'string' && target.startsWith('/') && !target.startsWith('//') ? target : null
+})
 
 async function submit() {
   if (!username.value.trim() || !password.value) return
@@ -17,7 +28,7 @@ async function submit() {
       body: { username: username.value.trim(), password: password.value },
     })
     set(res)
-    await navigateTo(res.user?.role === 'MEMBER' ? '/sales/new' : '/')
+    await navigateTo(redirectTarget.value ?? (res.user?.role === 'MEMBER' ? '/sales/new' : '/'))
   } catch (err: unknown) {
     error.value = apiErrorMessage(err, 'Incorrect username or password')
     password.value = ''
@@ -31,7 +42,8 @@ async function submit() {
   <div class="flex min-h-screen flex-col justify-center bg-brand-700 px-6 text-white">
     <div class="mx-auto w-full max-w-sm">
       <div class="mb-8 text-center">
-        <h1 class="text-2xl font-bold">Sari-Sari Store</h1>
+        <BrandMark :size="64" class="mx-auto mb-3" />
+        <h1 class="text-2xl font-bold">Tindahan</h1>
         <p class="mt-1 text-brand-100">Sign in to your account</p>
       </div>
 

@@ -1,5 +1,5 @@
 {
-  "name": "sari-sari-store",
+  "name": "tindahan",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,6 +12,7 @@
     "seed:test": "tsx scripts/seed-test-db.ts",
     "hash-password": "tsx scripts/hash-password.ts",
     "hash-pin": "tsx scripts/hash-pin.ts",
+    "icons:generate": "tsx scripts/generate-icons.ts",
     "test:unit": "node --import tsx --test tests/unit/**/*.test.ts",
     "test:e2e": "playwright test"
   },
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
+    "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.0.0",
     "drizzle-kit": "^0.31.10",

@@ -26,7 +26,7 @@ const commitSchema = z.object({
 export default defineEventHandler(async (event) => {
   const { rows: inputRows, importStock } = await readValidated(event, commitSchema)
   const db = useDb()
-  const user = requireUser(event)
+  requireUser(event)
 
   const rows = inputRows
     .map((row) => ({
@@ -130,13 +130,6 @@ export default defineEventHandler(async (event) => {
         )
       }
     }
-
-    await recordAudit(tx, {
-      userId: user.id,
-      action: 'IMPORT',
-      entityType: 'PRODUCT',
-      description: `Imported ${importStock ? 'inventory' : 'products only'}: ${created} created, ${updated} updated, ${skipped} skipped`,
-    })
   })
 
   return { created, updated, skipped }
