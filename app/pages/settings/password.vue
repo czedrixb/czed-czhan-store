@@ -9,23 +9,33 @@ const confirmPassword = ref('')
 const error = ref('')
 const loading = ref(false)
 
-const mismatch = computed(() => Boolean(newPassword.value && confirmPassword.value && newPassword.value !== confirmPassword.value))
+const lengthError = computed(() => passwordLengthError(newPassword.value))
+const mismatchError = computed(() => (newPassword.value ? passwordMismatchError(newPassword.value, confirmPassword.value) : null))
 const canSubmit = computed(
-  () => currentPassword.value.length > 0 && newPassword.value.length >= 6 && newPassword.value === confirmPassword.value,
+  () =>
+    currentPassword.value.length > 0 &&
+    newPassword.value.length >= PASSWORD_MIN_LENGTH &&
+    !lengthError.value &&
+    newPassword.value === confirmPassword.value,
 )
 
 async function submit() {
   if (!canSubmit.value) return
   loading.value = true
   error.value = ''
+  // Read before load({ force: true }) below overwrites session.value with
+  // the post-change state (mustChangePassword now false) - otherwise this
+  // always evaluated to false and sent every successful change to /settings
+  // instead of sending a just-onboarded user home.
+  const wasForced = forced.value
   try {
     await $fetch('/api/account/password', {
       method: 'POST',
-      body: { currentPassword: currentPassword.value, newPassword: newPassword.value },
+      body: { currentPassword: currentPassword.value, newPassword: newPassword.value, confirmPassword: confirmPassword.value },
     })
     await load({ force: true })
     toast.success('Password changed.')
-    await navigateTo(forced.value ? '/' : '/settings')
+    await navigateTo(wasForced ? '/' : '/settings')
   } catch (err: unknown) {
     const message = apiErrorMessage(err, 'Could not change password')
     error.value = message
@@ -47,16 +57,15 @@ async function submit() {
 
       <form class="space-y-4 rounded-[var(--radius-card)] bg-surface p-5 text-ink shadow-[var(--shadow-raised)]" @submit.prevent="submit">
         <AppField label="Current (temporary) password" for="current-password">
-          <input id="current-password" v-model="currentPassword" data-testid="current-password" type="password" autocomplete="current-password" class="field-input" />
+          <PasswordField id="current-password" v-model="currentPassword" testid="current-password" autocomplete="current-password" />
         </AppField>
-        <AppField label="New password" for="new-password">
-          <input id="new-password" v-model="newPassword" data-testid="new-password" type="password" autocomplete="new-password" class="field-input" />
+        <AppField label="New password" for="new-password" :error="lengthError ?? undefined">
+          <PasswordField id="new-password" v-model="newPassword" testid="new-password" autocomplete="new-password" />
         </AppField>
-        <AppField label="Confirm new password" for="confirm-password">
-          <input id="confirm-password" v-model="confirmPassword" data-testid="confirm-password" type="password" autocomplete="new-password" class="field-input" />
+        <AppField label="Confirm new password" for="confirm-password" :error="mismatchError ?? undefined">
+          <PasswordField id="confirm-password" v-model="confirmPassword" testid="confirm-password" autocomplete="new-password" />
         </AppField>
 
-        <p v-if="mismatch" class="rounded-lg bg-danger-50 px-3 py-2 text-sm font-medium text-danger-600">Those passwords do not match</p>
         <p v-if="error" data-testid="password-error" class="rounded-lg bg-danger-50 px-3 py-2 text-sm font-medium text-danger-600">{{ error }}</p>
 
         <AppButton type="submit" block size="lg" data-testid="submit-password" :loading="loading" :disabled="!canSubmit">
@@ -71,16 +80,15 @@ async function submit() {
     <div class="px-4 py-4">
       <form class="space-y-4 rounded-[var(--radius-card)] border border-line bg-surface p-4" @submit.prevent="submit">
         <AppField label="Current password" for="current-password">
-          <input id="current-password" v-model="currentPassword" data-testid="current-password" type="password" autocomplete="current-password" class="field-input text-sm" />
+          <PasswordField id="current-password" v-model="currentPassword" testid="current-password" autocomplete="current-password" />
         </AppField>
-        <AppField label="New password" for="new-password">
-          <input id="new-password" v-model="newPassword" data-testid="new-password" type="password" autocomplete="new-password" class="field-input text-sm" />
+        <AppField label="New password" for="new-password" :error="lengthError ?? undefined">
+          <PasswordField id="new-password" v-model="newPassword" testid="new-password" autocomplete="new-password" />
         </AppField>
-        <AppField label="Confirm new password" for="confirm-password">
-          <input id="confirm-password" v-model="confirmPassword" data-testid="confirm-password" type="password" autocomplete="new-password" class="field-input text-sm" />
+        <AppField label="Confirm new password" for="confirm-password" :error="mismatchError ?? undefined">
+          <PasswordField id="confirm-password" v-model="confirmPassword" testid="confirm-password" autocomplete="new-password" />
         </AppField>
 
-        <p v-if="mismatch" class="rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger-600">Those passwords do not match</p>
         <p v-if="error" data-testid="password-error" class="rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger-600">{{ error }}</p>
 
         <AppButton type="submit" block size="sm" data-testid="submit-password" :loading="loading" :disabled="!canSubmit">

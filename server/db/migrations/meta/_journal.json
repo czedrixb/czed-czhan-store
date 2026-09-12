@@ -36,6 +36,13 @@
       "when": 1789000000000,
       "tag": "0004_add_sale_transactions",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789214760468,
+      "tag": "0005_overrated_captain_stacy",
+      "breakpoints": true
     }
   ]
 }

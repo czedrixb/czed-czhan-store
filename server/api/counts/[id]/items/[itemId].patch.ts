@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
 
   const { actualQuantity } = await readValidated(event, patchSchema)
   const db = useDb()
-  const user = requireUser(event)
+  requireUser(event)
 
   return db.transaction(async (tx) => {
     const [count] = await tx.select().from(inventoryCounts).where(eq(inventoryCounts.id, countId))
@@ -36,13 +36,6 @@ export default defineEventHandler(async (event) => {
       .where(eq(inventoryCountItems.id, itemId))
       .returning()
 
-    await recordAudit(tx, {
-      userId: user.id,
-      action: 'COUNT_ITEM',
-      entityType: 'INVENTORY_COUNT',
-      entityId: countId,
-      description: `Counted product #${item.productId}: ${actualQuantity} actual, ${item.expectedQuantity} expected`,
-    })
     return updated
   })
 })

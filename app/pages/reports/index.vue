@@ -52,9 +52,9 @@ onMounted(load)
         <h2 class="text-sm font-semibold text-ink-muted">{{ formatDateLabel(daily.date) }}</h2>
         <div class="grid grid-cols-2 gap-3">
           <StatTile label="Total Revenue" :value="formatPeso(daily.revenue)" tone="brand" />
-          <StatTile label="Cost of Goods" :value="formatPeso(daily.cost)" />
-          <StatTile label="Gross Profit" :value="formatPeso(daily.profit)" tone="brand" />
-          <StatTile label="Items Sold" :value="String(daily.itemsSold)" />
+          <StatTile label="Cost of Goods" :value="formatPeso(daily.cost)" tone="accent" />
+          <StatTile label="Gross Profit" :value="formatPeso(daily.profit)" tone="teal" />
+          <StatTile label="Items Sold" :value="String(daily.itemsSold)" tone="amber" />
         </div>
         <StatTile label="Transactions" :value="String(daily.transactions)" />
         <a
@@ -70,9 +70,9 @@ onMounted(load)
         <h2 class="text-sm font-semibold text-ink-muted">{{ formatDateLabel(weekly.start) }} to {{ formatDateLabel(weekly.end) }}</h2>
         <div class="grid grid-cols-2 gap-3">
           <StatTile label="Revenue" :value="formatPeso(weekly.revenue)" tone="brand" />
-          <StatTile label="Cost" :value="formatPeso(weekly.cost)" />
-          <StatTile label="Gross Profit" :value="formatPeso(weekly.profit)" tone="brand" />
-          <StatTile label="Items Sold" :value="String(weekly.itemsSold)" />
+          <StatTile label="Cost" :value="formatPeso(weekly.cost)" tone="accent" />
+          <StatTile label="Gross Profit" :value="formatPeso(weekly.profit)" tone="teal" />
+          <StatTile label="Items Sold" :value="String(weekly.itemsSold)" tone="amber" />
         </div>
         <section v-if="weekly.topProducts.length">
           <h3 class="mb-2 text-sm font-semibold text-ink-muted">Top Products</h3>
@@ -96,9 +96,9 @@ onMounted(load)
         <h2 class="text-sm font-semibold text-ink-muted">{{ formatDateLabel(monthly.start) }} to {{ formatDateLabel(monthly.end) }}</h2>
         <div class="grid grid-cols-2 gap-3">
           <StatTile label="Revenue" :value="formatPeso(monthly.revenue)" tone="brand" />
-          <StatTile label="Cost" :value="formatPeso(monthly.cost)" />
-          <StatTile label="Gross Profit" :value="formatPeso(monthly.profit)" tone="brand" />
-          <StatTile label="Items Sold" :value="String(monthly.itemsSold)" />
+          <StatTile label="Cost" :value="formatPeso(monthly.cost)" tone="accent" />
+          <StatTile label="Gross Profit" :value="formatPeso(monthly.profit)" tone="teal" />
+          <StatTile label="Items Sold" :value="String(monthly.itemsSold)" tone="amber" />
         </div>
         <section v-if="monthly.topProducts.length">
           <h3 class="mb-2 text-sm font-semibold text-ink-muted">Best-Selling Products</h3>

@@ -3,7 +3,7 @@ import { inventoryCountItems, inventoryCounts, products } from '../../db/schema'
 
 export default defineEventHandler(async (event) => {
   const db = useDb()
-  const user = requireUser(event)
+  requireUser(event)
 
   const count = await db.transaction(async (tx) => {
     const [created] = await tx.insert(inventoryCounts).values({}).returning()
@@ -22,14 +22,6 @@ export default defineEventHandler(async (event) => {
         })),
       )
     }
-
-    await recordAudit(tx, {
-      userId: user.id,
-      action: 'CREATE',
-      entityType: 'INVENTORY_COUNT',
-      entityId: created.id,
-      description: `Started inventory count #${created.id} with ${activeProducts.length} products`,
-    })
 
     return created
   })

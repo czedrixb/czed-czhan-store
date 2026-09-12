@@ -18,7 +18,7 @@ test('favicon, Apple touch icon and installed PWA use the storefront logo artwor
   expect(manifest.icons).toEqual(expect.arrayContaining([
     expect.objectContaining({ src: 'icons/storefront-192.png', sizes: '192x192' }),
     expect.objectContaining({ src: 'icons/storefront-512.png', sizes: '512x512' }),
-    expect.objectContaining({ src: 'icons/storefront-512.png', purpose: 'maskable' }),
+    expect.objectContaining({ src: 'icons/storefront-512-maskable.png', sizes: '512x512', purpose: 'maskable' }),
   ]))
 
   for (const size of [16, 32, 180, 192, 512]) {
@@ -34,4 +34,19 @@ test('favicon, Apple touch icon and installed PWA use the storefront logo artwor
     }, url)
     expect(dimensions).toEqual([size, size])
   }
+
+  // The maskable icon is a distinct, dedicated asset (full-bleed background,
+  // content inset to the safe zone) rather than the plain icon reused with a
+  // "maskable" label slapped on.
+  const maskableUrl = new URL('/icons/storefront-512-maskable.png', page.url()).href
+  const maskableAsset = await request.get(maskableUrl)
+  expect(maskableAsset.ok()).toBeTruthy()
+  expect(maskableAsset.headers()['content-type']).toContain('image/png')
+  const maskableDimensions = await page.evaluate(async (src) => {
+    const image = new Image()
+    image.src = src
+    await image.decode()
+    return [image.naturalWidth, image.naturalHeight]
+  }, maskableUrl)
+  expect(maskableDimensions).toEqual([512, 512])
 })

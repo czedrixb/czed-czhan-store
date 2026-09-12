@@ -9,7 +9,7 @@ import { hashPassword } from '../server/utils/auth'
 // Playwright's interactions and intermittently wiped in-progress form state.
 // A disposable, migrated PGlite database per run keeps tests off the
 // developer's real .data/pglite database and starting from a clean slate.
-const dataDir = mkdtempSync(path.join(tmpdir(), 'sari-sari-e2e-'))
+const dataDir = mkdtempSync(path.join(tmpdir(), 'tindahan-e2e-'))
 
 export const E2E_PASSWORD = '1234test'
 

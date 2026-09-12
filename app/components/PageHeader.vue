@@ -1,8 +1,13 @@
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
   title: string
   subtitle?: string
 }>()
+
+// Every page renders exactly one PageHeader or HomeHeader, so this is the
+// single place that sets the "Page name · Tindahan" document title instead
+// of repeating useHead in each of the ~15 pages.
+useHead({ title: () => props.title })
 </script>
 
 <template>

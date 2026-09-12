@@ -12,8 +12,8 @@ export interface SessionUser {
 
 export async function resolveSessionUser(event: H3Event): Promise<SessionUser | null> {
   const config = useRuntimeConfig()
-  const userId = verifySessionToken(getCookie(event, SESSION_COOKIE_NAME), config.sessionSecret)
-  if (!userId) return null
+  const token = verifySessionToken(getCookie(event, SESSION_COOKIE_NAME), config.sessionSecret)
+  if (!token) return null
 
   const db = useDb()
   const [user] = await db
@@ -23,10 +23,19 @@ export async function resolveSessionUser(event: H3Event): Promise<SessionUser | 
       displayName: users.displayName,
       role: users.role,
       mustChangePassword: users.mustChangePassword,
+      sessionEpoch: users.sessionEpoch,
     })
     .from(users)
-    .where(and(eq(users.id, userId), eq(users.isActive, true)))
-  return user ?? null
+    .where(and(eq(users.id, token.userId), eq(users.isActive, true)))
+  if (!user) return null
+
+  // A stale epoch means this cookie predates an admin reset or a self
+  // password change - reject it instead of trusting a token that should
+  // already be dead.
+  if (user.sessionEpoch !== token.epoch) return null
+
+  const { sessionEpoch: _sessionEpoch, ...sessionUser } = user
+  return sessionUser
 }
 
 export function requireUser(event: H3Event): SessionUser {

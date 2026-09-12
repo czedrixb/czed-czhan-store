@@ -43,17 +43,17 @@ export default defineNuxtConfig({
   pwa: {
     registerType: 'autoUpdate',
     manifest: {
-      name: 'Sari-Sari Store',
-      short_name: 'SariSari',
-      description: 'Inventory, sales, and profit tracking for a sari-sari store',
+      name: 'Tindahan',
+      short_name: 'Tindahan',
+      description: 'Inventory, sales, and profit tracking for your sari-sari store',
       theme_color: '#6d5de0',
-      background_color: '#f6f4fb',
+      background_color: '#faf8f3',
       display: 'standalone',
       start_url: '/',
       icons: [
         { src: 'icons/storefront-192.png', sizes: '192x192', type: 'image/png' },
         { src: 'icons/storefront-512.png', sizes: '512x512', type: 'image/png' },
-        { src: 'icons/storefront-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        { src: 'icons/storefront-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
       ],
     },
     workbox: {
@@ -70,6 +70,10 @@ export default defineNuxtConfig({
 
   app: {
     head: {
+      title: 'Tindahan',
+      // titleTemplate needs a function (title) => string, which nuxt.config's
+      // serializable app.head type doesn't accept - set at runtime instead,
+      // in app/app.vue, right where the splash is also wired up.
       viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
       meta: [{ name: 'theme-color', content: '#6d5de0' }],
       link: [

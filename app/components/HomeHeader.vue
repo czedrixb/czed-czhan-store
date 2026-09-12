@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { PhPlus } from '@phosphor-icons/vue'
 
-// Home-only hero header (reference design: profile chip + icon button above
-// a large headline). Deliberately not a PageHeader variant - PageHeader's
+// Home-only hero header (reference design: brand mark, profile chip and icon
+// button above a large headline). Deliberately not a PageHeader variant - PageHeader's
 // rendered height is load-bearing for .sticky-search on /sales/new and
 // /inventory (see --header-h in main.css), and this header isn't sticky, so
 // keeping it a separate component avoids coupling that offset to a second
 // set of markup.
-defineProps<{
+const props = defineProps<{
   title: string
   subtitle?: string
 }>()
+
+useHead({ title: () => props.title })
 
 const { session } = useSession()
 
@@ -28,7 +30,12 @@ const initials = computed(() => {
 
 <template>
   <header class="safe-top px-4 pb-2 [--safe-pt:1.75rem]">
-    <div class="flex items-center justify-between gap-3">
+    <div class="flex items-center gap-2">
+      <BrandMark :size="28" />
+      <span class="text-sm font-bold tracking-tight text-ink">Tindahan</span>
+    </div>
+
+    <div class="mt-3 flex items-center justify-between gap-3">
       <div class="flex min-w-0 items-center gap-3">
         <span
           class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700"
