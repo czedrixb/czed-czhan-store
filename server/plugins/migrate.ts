@@ -10,6 +10,23 @@ export default defineNitroPlugin(async () => {
   // deploy via `npm run db:migrate` (see README).
   if (!config.databaseUrl) {
     await runMigrations()
+  } else {
+    // Can't auto-migrate a remote database (see above), but silent drift here
+    // is how a routine schema change turns into every request failing with an
+    // opaque "column does not exist" error. Warn loudly instead. Never allowed
+    // to throw: a broken check must not take down a server that would
+    // otherwise have booted fine.
+    try {
+      const unapplied = await findUnappliedRemoteMigrations()
+      if (unapplied && unapplied.length > 0) {
+        console.warn(
+          `[migrate] Database is behind: ${unapplied.length} unapplied migration${unapplied.length === 1 ? '' : 's'} (${unapplied.join(', ')}).`,
+        )
+        console.warn('[migrate] Run `npm run db:migrate` against this DATABASE_URL.')
+      }
+    } catch (err) {
+      console.warn('[migrate] Could not check for unapplied migrations:', err instanceof Error ? err.message : err)
+    }
   }
 
   if (config.storePasswordHash) {

@@ -36,7 +36,17 @@ export function formatTimeLabel(value: string | Date): string {
 
 // Every mutation catch block needs to pull a human-readable message out of a
 // $fetch error. This was copy-pasted inline in 8+ places; centralized here.
+//
+// A 5xx never gets its statusMessage (or the caller's fallback) shown as-is: both
+// would misrepresent a server/database fault as something the user did wrong (e.g.
+// login.vue's fallback is "Incorrect username or password"), or leak internals.
 export function apiErrorMessage(err: unknown, fallback: string): string {
+  const statusCode = (err as { statusCode?: number; data?: { statusCode?: number }; status?: number })?.statusCode
+    ?? (err as { data?: { statusCode?: number } })?.data?.statusCode
+    ?? (err as { status?: number })?.status
+  if (typeof statusCode === 'number' && statusCode >= 500) {
+    return 'Something went wrong on our end. Please try again.'
+  }
   const message = (err as { data?: { statusMessage?: string } })?.data?.statusMessage
   return message || fallback
 }

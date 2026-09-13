@@ -1,5 +1,6 @@
 import path from 'node:path'
-import { mkdirSync } from 'node:fs'
+import { mkdirSync, readFileSync } from 'node:fs'
+import { sql } from 'drizzle-orm'
 import { PGlite } from '@electric-sql/pglite'
 import { drizzle as drizzlePglite } from 'drizzle-orm/pglite'
 import { migrate as migratePglite } from 'drizzle-orm/pglite/migrator'
@@ -62,4 +63,48 @@ export async function createInMemoryDb() {
   const db = drizzlePglite(client, { schema })
   await migratePglite(db, { migrationsFolder: MIGRATIONS_FOLDER })
   return db
+}
+
+export interface MigrationJournalEntry {
+  tag: string
+  when: number
+}
+
+/**
+ * Pure diff: which journal entries (shipped in this build's migrations folder)
+ * have no matching applied-migration timestamp. No I/O, so it's unit-testable
+ * without a database - see findUnappliedRemoteMigrations for the impure wrapper.
+ */
+export function findUnappliedMigrations(journalEntries: MigrationJournalEntry[], appliedTimestamps: number[]): string[] {
+  const applied = new Set(appliedTimestamps)
+  return journalEntries.filter((entry) => !applied.has(entry.when)).map((entry) => entry.tag)
+}
+
+/**
+ * For a remote (Postgres) database, where runMigrations() is never called on boot
+ * (see the Nitro-bundle comment on the plugin that calls this), checks whether the
+ * database has fallen behind the migrations shipped in this build - so drift is
+ * logged loudly instead of surfacing later as an opaque "column does not exist"
+ * query error. Returns null, rather than throwing, if the check can't be completed
+ * (e.g. the migrations folder isn't present in this bundle); the caller should
+ * still wrap this in try/catch, since the schema/table it queries could itself be
+ * missing or unreachable.
+ */
+export async function findUnappliedRemoteMigrations(): Promise<string[] | null> {
+  const db = useDb()
+  if (_kind !== 'postgres') return null
+
+  let journal: { entries: MigrationJournalEntry[] }
+  try {
+    const journalPath = path.join(MIGRATIONS_FOLDER, 'meta/_journal.json')
+    journal = JSON.parse(readFileSync(journalPath, 'utf-8'))
+  } catch {
+    return null
+  }
+
+  const rows = await (db as PostgresDb).execute<{ created_at: string | number }>(
+    sql`select created_at from drizzle.__drizzle_migrations`,
+  )
+  const appliedTimestamps = Array.from(rows).map((row) => Number(row.created_at))
+  return findUnappliedMigrations(journal.entries, appliedTimestamps)
 }
